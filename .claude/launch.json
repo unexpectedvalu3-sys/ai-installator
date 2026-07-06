@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "n8n",
+      "runtimeExecutable": "n8n",
+      "runtimeArgs": ["start"],
+      "port": 5678,
+      "autoPort": false
+    },
+    {
+      "name": "kineweb",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "kine-cotation/webapp"],
+      "port": 8765
+    }
+  ]
+}

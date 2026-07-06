@@ -1,0 +1,2 @@
+﻿id;fichier;confiance;zone;chirurgie;nb_seances;bilan;domicile;urgence;pathologie;top5_acte_ids;dap_pred;erreur
+ordo_01;ordo_01.png;high;genou;oui;30;True;True;False;Reeducation du genou DROIT suite a la pose d'une prothese totale de genou (PTG) operee le 10/06/2026;31 32 35 36 34;oui;

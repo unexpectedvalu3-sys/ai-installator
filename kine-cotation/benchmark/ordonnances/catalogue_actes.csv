@@ -1,0 +1,83 @@
+﻿acte_id;code;coef;tarif;article;ref;libelle
+0;RAM;8.09;17.88;1A;R;Lombalgie commune (prise en charge)
+1;RAM;8.11;17.92;1A;;Affection rachis lombo-sacre hors referentiel sans chirurgie
+2;RAO;8.09;17.88;1A;;Affection rachis lombo-sacre hors referentiel avec chirurgie
+3;RAM;8.1;17.9;1A;;Affection rachis dorsal sans chirurgie
+4;RAO;8.08;17.86;1A;;Affection rachis dorsal avec chirurgie
+5;RAM;8.07;17.83;1A;R;Cervicalgie non specifique sans atteinte neurologique
+6;RAM;8.08;17.86;1A;R;Traumatisme recent du rachis cervical sans lesion neurologique
+7;RAM;8.12;17.95;1A;;Affection rachis cervical sans chirurgie
+8;RAO;8.1;17.9;1A;;Affection rachis cervical avec chirurgie
+9;RAM;8.13;17.97;1A;;Affection d'au moins deux segments du rachis sans chirurgie
+10;RAO;8.11;17.92;1A;;Affection d'au moins deux segments du rachis avec chirurgie
+11;RSC;8.09;17.88;1B;R;Apres liberation du nerf median au canal carpien
+12;VSM;8.1;17.9;1B;;Affection du poignet ou main non operee
+13;VSC;8.11;17.92;1B;;Affection du poignet ou main operee
+14;RSC;8.1;17.9;1B;R;Fracture extremite distale des deux os de l'avant-bras operee
+15;RSM;8.11;17.92;1B;R;Fracture extremite distale des deux os de l'avant-bras non operee
+16;RSM;8.12;17.95;1B;R;Fracture (avec ou sans luxation) non operee du coude chez l'adulte
+17;RSC;8.12;17.95;1B;R;Fracture (avec ou sans luxation) operee du coude chez l'adulte
+18;VSC;8.09;17.88;1B;;Affection du coude ou de l'avant-bras non operee
+19;VSC;8.09;17.88;1B;;Affection du coude ou de l'avant-bras operee
+20;RSM;8.09;17.88;1B;R;Tendinopathie de la coiffe des rotateurs non operee
+21;RSC;8.11;17.92;1B;R;Apres reinsertion/suture de tendons de la coiffe des rotateurs
+22;RSM;8.1;17.9;1B;R;Fracture non operee de l'extremite proximale de l'humerus
+23;VSM;8.08;17.86;1B;;Affection de l'epaule ou du bras non operee
+24;VSC;8.1;17.9;1B;;Affection de l'epaule ou du bras operee
+25;VSM;8.11;17.92;1B;;Au moins deux segments du meme membre superieur sans chirurgie
+26;VSC;8.12;17.95;1B;;Au moins deux segments du meme membre superieur avec chirurgie
+27;RIC;8.11;17.92;1C;;Entorse externe recente de cheville-pied operee
+28;RIM;8.1;17.9;1C;R;Entorse externe recente de cheville-pied non operee
+29;VIM;8.1;17.9;1C;;Affection de la cheville ou pied non operee
+30;VIC;8.11;17.92;1C;;Affection de la cheville ou pied operee
+31;RIC;8.12;17.95;1C;R;Apres arthroplastie du genou (prothese totale ou uni-compartimentaire)
+32;RIC;8.08;17.86;1C;R;Apres reconstruction du ligament croise anterieur du genou
+33;RIC;8.09;17.88;1C;R;Apres meniscectomie isolee (arthroscopie)
+34;VIM;8.11;17.92;1C;;Affection du genou ou de la jambe non operee
+35;VIC;8.1;17.9;1C;;Affection du genou ou de la jambe operee
+36;RIC;8.1;17.9;1C;R;Apres arthroplastie de hanche (prothese totale)
+37;VIM;8.09;17.88;1C;;Affection de la hanche ou de la cuisse non operee
+38;VIC;8.09;17.88;1C;;Affection de la hanche ou de la cuisse operee
+39;VIM;8.12;17.95;1C;;Au moins deux segments du meme membre inferieur sans chirurgie
+40;VIC;8.12;17.95;1C;;Au moins deux segments du meme membre inferieur avec chirurgie
+41;TER;9.49;20.97;1D;;Au moins 2 territoires leses sans chirurgie
+42;TER;9.51;21.02;1D;;Au moins 2 territoires leses avec chirurgie
+43;DRA;8.09;17.88;1E;;Deviation du rachis lombo-sacre (moins de 18 ans)
+44;DRA;8.08;17.86;1E;;Deviation du rachis dorsal (moins de 18 ans)
+45;DRA;8.11;17.92;1E;;Deviation du rachis cervical (moins de 18 ans)
+46;DRA;8.1;17.9;1E;;Deviation portant sur au moins deux segments du rachis (moins de 18 ans)
+47;APM;8.11;17.92;1F;;Amputation d'un membre superieur
+48;APM;8.1;17.9;1F;;Amputation d'un membre inferieur
+49;APM;9.5;21.0;1F;;Amputation d'au moins 2 membres
+50;NMI;8;17.68;2;;Rhumatisme inflammatoire - atteinte localisee a un membre ou le tronc
+51;NMI;9.01;19.91;2;;Rhumatisme inflammatoire - plusieurs membres ou tronc + membres
+52;RAB;8.01;17.7;3;;Reeducation abdominale pre/post-operatoire (incl. post-cesarienne)
+53;RAB;8;17.68;3;;Reeducation abdominale du post-partum
+54;NMI;8.5;18.79;4;;Atteinte peripherique radiculaire/tronculaire localisee a un membre ou la face
+55;NMI;10.01;22.12;4;;Atteinte peripherique interessant plusieurs membres
+56;NMI;9;19.89;4;;Reeducation de l'hemiplegie
+57;NMI;11.01;24.33;4;;Reeducation de la paraplegie et de la tetraplegie
+58;NMI;8.51;18.81;4;;Affection neuro stable/evolutive - deficiences a un membre et sa racine
+59;NMI;10;22.1;4;;Affection neuro stable/evolutive - 2 membres ou plus, ou membre + tronc/face
+60;NMI;10.99;24.29;4;;Reeducation des malades atteints de myopathie
+61;NMI;11;24.31;4;;Reeducation encephalopathie infantile (stade initial a l'age adulte)
+62;TER;16;35.36;4;;Enfants paralysie cerebrale / polyhandicap (prescription etablissement coordinateur)
+63;ARL;8.49;18.76;5;;Maladies respiratoires avec desencombrement urgent (bronchiolite du nourrisson...)
+64;ARL;8.5;18.79;5;;Maladies respiratoires obstructives, restrictives ou mixtes (hors urgence)
+65;ARL;8.51;18.81;5;;Reeducation respiratoire preoperatoire ou post-operatoire
+66;ARL;10;22.1;5;;Prise en charge respiratoire du patient atteint de mucoviscidose
+67;ARL;28;61.88;5;;Readaptation respiratoire BPCO/ALD - prise en charge individuelle (~1h30)
+68;ARL;20;44.2;5;;Readaptation respiratoire BPCO/ALD - groupe 2 a 4 personnes (~1h30)
+69;ARL;7.99;17.66;6;;Reeducation maxillo-faciale (hors paralysie faciale)
+70;ARL;8;17.68;6;;Reeducation vestibulaire et des troubles de l'equilibre
+71;ARL;8.01;17.7;6;;Reeducation des troubles de la deglutition isoles
+72;RAV;8.01;17.7;7;;Arteriopathie des membres inferieurs (claudication, troubles trophiques)
+73;RAV;7.99;17.66;7;;Insuffisance veineuse des membres inferieurs (retentissement articulaire/trophique)
+74;RAV;8;17.68;7;;Lymphoedeme vrai par drainage manuel - un membre ou cou et face
+75;RAV;9;19.89;7;;Lymphoedeme vrai par drainage manuel - deux membres
+76;RAV;15.5;34.26;7;;Lymphoedeme membre sup apres cancer du sein + reeducation epaule (~60 mn, optimal 10 seances)
+77;RAB;8.5;18.79;8;;Reeducation perineale active (controle manuel / electrostimulation / biofeedback)
+78;RPE;8.5;18.79;9;;Reeducation analytique et globale des membres inf, posture, equilibre, coordination chez le sujet age
+79;RPB;8;17.68;10;;Brulures localisees a un membre ou un segment de membre
+80;RPB;9;19.89;10;;Brulures etendues a plusieurs membres et/ou au tronc
+81;PLL;12;26.52;11;;Soins palliatifs - cotation journaliere forfaitaire (quel que soit le nombre d'interventions)

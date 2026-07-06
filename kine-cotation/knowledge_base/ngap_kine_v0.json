@@ -1,0 +1,57 @@
+{
+  "_meta": {
+    "source": "Avenant 7 NGAP kiné, en vigueur 22/02/2024",
+    "version": "0.1-seed",
+    "date": "2026-06-27",
+    "avertissement": "Outil d'AIDE A LA DECISION. Le kine reste seul responsable de sa facturation. Coefficients et nombres de seances marques null = A SOURCER officiellement (avenant 7 / guide CPAM AURA) avant tout usage reel.",
+    "regle_lettres_cles": {
+      "position_1": "domaine / pathologie",
+      "position_2": "zone anatomique: S=membre superieur, I=membre inferieur",
+      "position_3": "prise en charge: C=chirurgical, M=medical",
+      "prefixe_R_vs_V": "R=dans le referentiel pathologie, V=hors referentiel"
+    }
+  },
+  "valeur_lettre_cle_eur": {
+    "metropole": 2.21,
+    "drom": 2.43,
+    "_note": "A reconfirmer par lettre-cle. Tarif = coefficient x valeur."
+  },
+  "bilans_bdk": [
+    {
+      "code": "AMK",
+      "coefficient": 10.7,
+      "libelle": "BDK reeducation / readaptation fonctionnelle",
+      "regle_facturation": "1 a 10 seances, a la 30e seance, puis toutes les 20 seances",
+      "note": "Facturable meme sans mention 'bilan' sur l'ordonnance"
+    },
+    {
+      "code": "AMK",
+      "coefficient": 10.8,
+      "libelle": "BDK affections neurologiques et musculaires",
+      "regle_facturation": "1 a 10 seances, a la 60e seance, puis toutes les 50 seances",
+      "note": "Facturable meme sans mention 'bilan' sur l'ordonnance"
+    }
+  ],
+  "lettres_cles": [
+    { "code": "RAM", "domaine": "rachis", "zone": "rachis", "prise_en_charge": "M", "referentiel": null, "libelle": "Reeducation du rachis non opere", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RAO", "domaine": "rachis", "zone": "rachis", "prise_en_charge": "C", "referentiel": null, "libelle": "Reeducation du rachis opere", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "DRA", "domaine": "rachis", "zone": "rachis", "prise_en_charge": null, "referentiel": null, "libelle": "Reeducation pour deviation du rachis", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RSM", "domaine": "membre", "zone": "S", "prise_en_charge": "M", "referentiel": true, "libelle": "Membre superieur non opere (referentiel)", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RSC", "domaine": "membre", "zone": "S", "prise_en_charge": "C", "referentiel": true, "libelle": "Membre superieur opere (referentiel)", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "VSM", "domaine": "membre", "zone": "S", "prise_en_charge": "M", "referentiel": false, "libelle": "Membre superieur non opere (hors referentiel)", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "VSC", "domaine": "membre", "zone": "S", "prise_en_charge": "C", "referentiel": false, "libelle": "Membre superieur opere (hors referentiel)", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RIM", "domaine": "membre", "zone": "I", "prise_en_charge": "M", "referentiel": true, "libelle": "Membre inferieur non opere (referentiel)", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RIC", "domaine": "membre", "zone": "I", "prise_en_charge": "C", "referentiel": true, "libelle": "Membre inferieur opere (referentiel)", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "VIM", "domaine": "membre", "zone": "I", "prise_en_charge": "M", "referentiel": false, "libelle": "Membre inferieur non opere (hors referentiel)", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "VIC", "domaine": "membre", "zone": "I", "prise_en_charge": "C", "referentiel": false, "libelle": "Membre inferieur opere (hors referentiel)", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "ARL", "domaine": "specialite", "zone": "orl_respi_maxillo", "prise_en_charge": null, "referentiel": null, "libelle": "Affections respiratoires, maxillo-faciales et ORL", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "NMI", "domaine": "specialite", "zone": "neuromusculaire_rhumato", "prise_en_charge": null, "referentiel": null, "libelle": "Affections neuromusculaires ou rhumatismales inflammatoires", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RAV", "domaine": "specialite", "zone": "vasculaire", "prise_en_charge": null, "referentiel": null, "libelle": "Affections vasculaires", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "AMP", "domaine": "specialite", "zone": "amputation", "prise_en_charge": null, "referentiel": null, "libelle": "Amputations", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RPE", "domaine": "specialite", "zone": "geriatrie", "prise_en_charge": null, "referentiel": null, "libelle": "Deambulation chez la personne agee", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "TER", "domaine": "specialite", "zone": "multi_territoires", "prise_en_charge": null, "referentiel": null, "libelle": "Pathologies sur 2 territoires ou plus", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RAB", "domaine": "specialite", "zone": "abdo_perineo", "prise_en_charge": null, "referentiel": null, "libelle": "Reeducation abdominale et perineo-sphincterienne", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "RPB", "domaine": "specialite", "zone": "brulures", "prise_en_charge": null, "referentiel": null, "libelle": "Patients atteints de brulures", "coefficient": null, "nb_seances_reference": null, "dap": null },
+    { "code": "PLL", "domaine": "specialite", "zone": "palliatif", "prise_en_charge": null, "referentiel": null, "libelle": "Soins palliatifs", "coefficient": null, "nb_seances_reference": null, "dap": null }
+  ]
+}

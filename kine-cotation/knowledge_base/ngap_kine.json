@@ -1,0 +1,145 @@
+{
+  "_meta": {
+    "source": "SNMKR — Tableau NGAP v15a, tarifs applicables au 1er janvier 2026 (NGAP avenant 7)",
+    "source_url": "https://snmkr.fr/wp-content/uploads/2025/12/tableau-ngap_v15a.pdf",
+    "version": "1.0",
+    "date_extraction": "2026-06-27",
+    "avertissement": "Outil d'AIDE A LA DECISION. Le kine reste seul responsable de sa facturation. Verifier la version en vigueur du tableau SNMKR/ameli avant usage. Le coefficient depend de l'ACTE PRECIS, pas seulement de la lettre-cle.",
+    "valeur_lettre_cle_eur": { "metropole": 2.21, "drom": 2.43 },
+    "formule": "tarif = coefficient x valeur_lettre_cle (arrondi au centime)",
+    "legende": { "R": "acte inscrit au referentiel", "chirurgie": "true=acte post-chirurgical" }
+  },
+  "bilans": [
+    { "id": "BDK_REEDUC", "code": "AMK", "coefficient": 10.7, "tarif_metropole": 23.65, "libelle": "Bilan diagnostic kinesitherapique - reeducation/readaptation fonctionnelle", "regle": "seances 1 a 10, puis a la 30e, puis toutes les 20 seances" },
+    { "id": "BDK_NEURO", "code": "AMK", "coefficient": 10.8, "tarif_metropole": 23.87, "libelle": "Bilan diagnostic kinesitherapique - affections neurologiques et musculaires", "regle": "seances 1 a 10, puis a la 60e, puis toutes les 50 seances" }
+  ],
+  "supplements": [
+    { "id": "BALNEO_BASSIN", "code": "AMK", "coefficient": 2.5, "tarif_metropole": 5.53, "libelle": "Kinebalneotherapie en bassin (min 2x1,80x0,60m) - supplement chap. II" },
+    { "id": "BALNEO_PISCINE", "code": "AMK", "coefficient": 3.5, "tarif_metropole": 7.74, "libelle": "Kinebalneotherapie en piscine (min 2x3x1,10m) - supplement chap. II" },
+    { "id": "BANDAGE_MULTI_1", "code": "RAV", "coefficient": 1, "tarif_metropole": 2.21, "libelle": "Supplement bandage multicouche - un membre" },
+    { "id": "BANDAGE_MULTI_2", "code": "RAV", "coefficient": 2, "tarif_metropole": 4.42, "libelle": "Supplement bandage multicouche - deux membres" }
+  ],
+  "deplacements": {
+    "_note": "Au 01/01/2026 : IFS unique 4€ pour actes des articles 1,2,4,5,9 ; IFD classique 2,50€ pour les autres ; non cumulables entre elles. IK en supplement. Abattement km a confirmer (usage : 2 km plaine / 4 km montagne).",
+    "IFS_eur": 4.0,
+    "IFD_eur": 2.5,
+    "articles_IFS": ["1", "1A", "1B", "1C", "1D", "1E", "1F", "2", "4", "5", "9"],
+    "IK_metropole": { "plaine": 0.38, "montagne": 0.61, "pied_ski": 3.35 },
+    "IK_drom": { "plaine": 0.43, "montagne": 0.66, "pied_ski": 3.35 }
+  },
+  "referentiels": [
+    { "situation": "Entorse externe recente de la cheville non operee", "match_libelle": "entorse externe recente de cheville-pied non operee", "seances_avant_dap": 10, "dap_des_seance": 11, "note": "" },
+    { "situation": "Arthroplastie de hanche par prothese totale", "match_libelle": "arthroplastie de hanche", "seances_avant_dap": 15, "dap_des_seance": 16, "note": "" },
+    { "situation": "Arthroplastie du genou (prothese totale ou uni-compartimentaire)", "match_libelle": "arthroplastie du genou", "seances_avant_dap": 25, "dap_des_seance": 26, "note": "" },
+    { "situation": "Reconstruction du ligament croise anterieur du genou", "match_libelle": "reconstruction du ligament croise anterieur", "seances_avant_dap": 40, "dap_des_seance": 41, "note": "" },
+    { "situation": "Liberation du nerf median au canal carpien", "match_libelle": "liberation du nerf median au canal carpien", "seances_avant_dap": 0, "dap_des_seance": 1, "note": "DAP requise des la 1re seance" },
+    { "situation": "Meniscectomie isolee, totale ou subtotale, par arthroscopie", "match_libelle": "meniscectomie isolee", "seances_avant_dap": 15, "dap_des_seance": 16, "note": "" },
+    { "situation": "Reinsertion/suture de tendons de la coiffe des rotateurs", "match_libelle": "reinsertion/suture de tendons de la coiffe", "seances_avant_dap": 50, "dap_des_seance": 51, "note": "50 seances couvrent reeduc postop initiale (~6 sem.) + secondaire (~3 mois)" },
+    { "situation": "Prise en charge d'une lombalgie commune", "match_libelle": "lombalgie commune", "seances_avant_dap": 15, "dap_des_seance": 16, "note": "Serie d'actes. OU des la 31e si 30 seances de lombalgie deja prises en charge dans les 12 mois precedents" },
+    { "situation": "Prise en charge d'une cervicalgie commune (non specifique)", "match_libelle": "cervicalgie non specifique", "seances_avant_dap": 15, "dap_des_seance": 16, "note": "Serie d'actes. OU des la 31e si 30 seances de cervicalgie deja prises en charge dans les 12 mois precedents" },
+    { "situation": "Apres fracture de l'extremite distale des deux os de l'avant-bras", "match_libelle": "fracture extremite distale des deux os de l'avant-bras", "seances_avant_dap": 25, "dap_des_seance": 26, "note": "" },
+    { "situation": "Apres fracture (avec ou sans luxation) du coude chez l'adulte", "match_libelle": "fracture (avec ou sans luxation)", "seances_avant_dap": 30, "dap_des_seance": 31, "note": "Serie d'actes" },
+    { "situation": "Apres fracture non operee de l'extremite proximale de l'humerus", "match_libelle": "fracture non operee de l'extremite proximale de l'humerus", "seances_avant_dap": 30, "dap_des_seance": 31, "note": "" },
+    { "situation": "Traumatisme recent du rachis cervical sans lesion neurologique", "match_libelle": "traumatisme recent du rachis cervical", "seances_avant_dap": 10, "dap_des_seance": 11, "note": "" },
+    { "situation": "Tendinopathie de la coiffe des rotateurs non operee", "match_libelle": "tendinopathie de la coiffe des rotateurs non operee", "seances_avant_dap": 25, "dap_des_seance": 26, "note": "" }
+  ],
+  "actes": [
+    { "article": "1A", "region": "rachis", "code": "RAM", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": true,  "libelle": "Lombalgie commune (prise en charge)" },
+    { "article": "1A", "region": "rachis", "code": "RAM", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": false, "referentiel": false, "libelle": "Affection rachis lombo-sacre hors referentiel sans chirurgie" },
+    { "article": "1A", "region": "rachis", "code": "RAO", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": true,  "referentiel": false, "libelle": "Affection rachis lombo-sacre hors referentiel avec chirurgie" },
+    { "article": "1A", "region": "rachis", "code": "RAM", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": false, "referentiel": false, "libelle": "Affection rachis dorsal sans chirurgie" },
+    { "article": "1A", "region": "rachis", "code": "RAO", "coefficient": 8.08, "tarif_metropole": 17.86, "chirurgie": true,  "referentiel": false, "libelle": "Affection rachis dorsal avec chirurgie" },
+    { "article": "1A", "region": "rachis", "code": "RAM", "coefficient": 8.07, "tarif_metropole": 17.83, "chirurgie": false, "referentiel": true,  "libelle": "Cervicalgie non specifique sans atteinte neurologique" },
+    { "article": "1A", "region": "rachis", "code": "RAM", "coefficient": 8.08, "tarif_metropole": 17.86, "chirurgie": false, "referentiel": true,  "libelle": "Traumatisme recent du rachis cervical sans lesion neurologique" },
+    { "article": "1A", "region": "rachis", "code": "RAM", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": false, "referentiel": false, "libelle": "Affection rachis cervical sans chirurgie" },
+    { "article": "1A", "region": "rachis", "code": "RAO", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": true,  "referentiel": false, "libelle": "Affection rachis cervical avec chirurgie" },
+    { "article": "1A", "region": "rachis", "code": "RAM", "coefficient": 8.13, "tarif_metropole": 17.97, "chirurgie": false, "referentiel": false, "libelle": "Affection d'au moins deux segments du rachis sans chirurgie" },
+    { "article": "1A", "region": "rachis", "code": "RAO", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": true,  "referentiel": false, "libelle": "Affection d'au moins deux segments du rachis avec chirurgie" },
+
+    { "article": "1B", "region": "membre_sup", "code": "RSC", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": true,  "referentiel": true,  "libelle": "Apres liberation du nerf median au canal carpien" },
+    { "article": "1B", "region": "membre_sup", "code": "VSM", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": false, "referentiel": false, "libelle": "Affection du poignet ou main non operee" },
+    { "article": "1B", "region": "membre_sup", "code": "VSC", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": true,  "referentiel": false, "libelle": "Affection du poignet ou main operee" },
+    { "article": "1B", "region": "membre_sup", "code": "RSC", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": true,  "referentiel": true,  "libelle": "Fracture extremite distale des deux os de l'avant-bras operee" },
+    { "article": "1B", "region": "membre_sup", "code": "RSM", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": false, "referentiel": true,  "libelle": "Fracture extremite distale des deux os de l'avant-bras non operee" },
+    { "article": "1B", "region": "membre_sup", "code": "RSM", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": false, "referentiel": true,  "libelle": "Fracture (avec ou sans luxation) non operee du coude chez l'adulte" },
+    { "article": "1B", "region": "membre_sup", "code": "RSC", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": true,  "referentiel": true,  "libelle": "Fracture (avec ou sans luxation) operee du coude chez l'adulte" },
+    { "article": "1B", "region": "membre_sup", "code": "VSC", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": false, "libelle": "Affection du coude ou de l'avant-bras non operee" },
+    { "article": "1B", "region": "membre_sup", "code": "VSC", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": true,  "referentiel": false, "libelle": "Affection du coude ou de l'avant-bras operee" },
+    { "article": "1B", "region": "membre_sup", "code": "RSM", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": true,  "libelle": "Tendinopathie de la coiffe des rotateurs non operee" },
+    { "article": "1B", "region": "membre_sup", "code": "RSC", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": true,  "referentiel": true,  "libelle": "Apres reinsertion/suture de tendons de la coiffe des rotateurs" },
+    { "article": "1B", "region": "membre_sup", "code": "RSM", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": false, "referentiel": true,  "libelle": "Fracture non operee de l'extremite proximale de l'humerus" },
+    { "article": "1B", "region": "membre_sup", "code": "VSM", "coefficient": 8.08, "tarif_metropole": 17.86, "chirurgie": false, "referentiel": false, "libelle": "Affection de l'epaule ou du bras non operee" },
+    { "article": "1B", "region": "membre_sup", "code": "VSC", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": true,  "referentiel": false, "libelle": "Affection de l'epaule ou du bras operee" },
+    { "article": "1B", "region": "membre_sup", "code": "VSM", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": false, "referentiel": false, "libelle": "Au moins deux segments du meme membre superieur sans chirurgie" },
+    { "article": "1B", "region": "membre_sup", "code": "VSC", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": true,  "referentiel": false, "libelle": "Au moins deux segments du meme membre superieur avec chirurgie" },
+
+    { "article": "1C", "region": "membre_inf", "code": "RIC", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": true,  "referentiel": false, "libelle": "Entorse externe recente de cheville-pied operee" },
+    { "article": "1C", "region": "membre_inf", "code": "RIM", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": false, "referentiel": true,  "libelle": "Entorse externe recente de cheville-pied non operee" },
+    { "article": "1C", "region": "membre_inf", "code": "VIM", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": false, "referentiel": false, "libelle": "Affection de la cheville ou pied non operee" },
+    { "article": "1C", "region": "membre_inf", "code": "VIC", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": true,  "referentiel": false, "libelle": "Affection de la cheville ou pied operee" },
+    { "article": "1C", "region": "membre_inf", "code": "RIC", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": true,  "referentiel": true,  "libelle": "Apres arthroplastie du genou (prothese totale ou uni-compartimentaire)" },
+    { "article": "1C", "region": "membre_inf", "code": "RIC", "coefficient": 8.08, "tarif_metropole": 17.86, "chirurgie": true,  "referentiel": true,  "libelle": "Apres reconstruction du ligament croise anterieur du genou" },
+    { "article": "1C", "region": "membre_inf", "code": "RIC", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": true,  "referentiel": true,  "libelle": "Apres meniscectomie isolee (arthroscopie)" },
+    { "article": "1C", "region": "membre_inf", "code": "VIM", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": false, "referentiel": false, "libelle": "Affection du genou ou de la jambe non operee" },
+    { "article": "1C", "region": "membre_inf", "code": "VIC", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": true,  "referentiel": false, "libelle": "Affection du genou ou de la jambe operee" },
+    { "article": "1C", "region": "membre_inf", "code": "RIC", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": true,  "referentiel": true,  "libelle": "Apres arthroplastie de hanche (prothese totale)" },
+    { "article": "1C", "region": "membre_inf", "code": "VIM", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": false, "libelle": "Affection de la hanche ou de la cuisse non operee" },
+    { "article": "1C", "region": "membre_inf", "code": "VIC", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": true,  "referentiel": false, "libelle": "Affection de la hanche ou de la cuisse operee" },
+    { "article": "1C", "region": "membre_inf", "code": "VIM", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": false, "referentiel": false, "libelle": "Au moins deux segments du meme membre inferieur sans chirurgie" },
+    { "article": "1C", "region": "membre_inf", "code": "VIC", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": true,  "referentiel": false, "libelle": "Au moins deux segments du meme membre inferieur avec chirurgie" },
+
+    { "article": "1D", "region": "multi_territoires", "code": "TER", "coefficient": 9.49, "tarif_metropole": 20.97, "chirurgie": false, "referentiel": false, "libelle": "Au moins 2 territoires leses sans chirurgie" },
+    { "article": "1D", "region": "multi_territoires", "code": "TER", "coefficient": 9.51, "tarif_metropole": 21.02, "chirurgie": true,  "referentiel": false, "libelle": "Au moins 2 territoires leses avec chirurgie" },
+
+    { "article": "1E", "region": "rachis", "code": "DRA", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": false, "libelle": "Deviation du rachis lombo-sacre (moins de 18 ans)" },
+    { "article": "1E", "region": "rachis", "code": "DRA", "coefficient": 8.08, "tarif_metropole": 17.86, "chirurgie": false, "referentiel": false, "libelle": "Deviation du rachis dorsal (moins de 18 ans)" },
+    { "article": "1E", "region": "rachis", "code": "DRA", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": false, "referentiel": false, "libelle": "Deviation du rachis cervical (moins de 18 ans)" },
+    { "article": "1E", "region": "rachis", "code": "DRA", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": false, "referentiel": false, "libelle": "Deviation portant sur au moins deux segments du rachis (moins de 18 ans)" },
+
+    { "article": "1F", "region": "amputation", "code": "APM", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": true, "referentiel": false, "libelle": "Amputation d'un membre superieur" },
+    { "article": "1F", "region": "amputation", "code": "APM", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": true, "referentiel": false, "libelle": "Amputation d'un membre inferieur" },
+    { "article": "1F", "region": "amputation", "code": "APM", "coefficient": 9.5,  "tarif_metropole": 21.00, "chirurgie": true, "referentiel": false, "libelle": "Amputation d'au moins 2 membres" },
+
+    { "article": "2", "region": "rhumato_inflammatoire", "code": "NMI", "coefficient": 8,    "tarif_metropole": 17.68, "chirurgie": false, "referentiel": false, "libelle": "Rhumatisme inflammatoire - atteinte localisee a un membre ou le tronc" },
+    { "article": "2", "region": "rhumato_inflammatoire", "code": "NMI", "coefficient": 9.01, "tarif_metropole": 19.91, "chirurgie": false, "referentiel": false, "libelle": "Rhumatisme inflammatoire - plusieurs membres ou tronc + membres" },
+
+    { "article": "3", "region": "abdo_perineo", "code": "RAB", "coefficient": 8.01, "tarif_metropole": 17.70, "chirurgie": false, "referentiel": false, "libelle": "Reeducation abdominale pre/post-operatoire (incl. post-cesarienne)" },
+    { "article": "3", "region": "abdo_perineo", "code": "RAB", "coefficient": 8,    "tarif_metropole": 17.68, "chirurgie": false, "referentiel": false, "libelle": "Reeducation abdominale du post-partum" },
+
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 8.5,   "tarif_metropole": 18.79, "chirurgie": false, "referentiel": false, "libelle": "Atteinte peripherique radiculaire/tronculaire localisee a un membre ou la face" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10.01, "tarif_metropole": 22.12, "chirurgie": false, "referentiel": false, "libelle": "Atteinte peripherique interessant plusieurs membres" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 9,     "tarif_metropole": 19.89, "chirurgie": false, "referentiel": false, "libelle": "Reeducation de l'hemiplegie" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 11.01, "tarif_metropole": 24.33, "chirurgie": false, "referentiel": false, "libelle": "Reeducation de la paraplegie et de la tetraplegie" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 8.51,  "tarif_metropole": 18.81, "chirurgie": false, "referentiel": false, "libelle": "Affection neuro stable/evolutive - deficiences a un membre et sa racine" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10,    "tarif_metropole": 22.10, "chirurgie": false, "referentiel": false, "libelle": "Affection neuro stable/evolutive - 2 membres ou plus, ou membre + tronc/face" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10.99, "tarif_metropole": 24.29, "chirurgie": false, "referentiel": false, "libelle": "Reeducation des malades atteints de myopathie" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 11,    "tarif_metropole": 24.31, "chirurgie": false, "referentiel": false, "libelle": "Reeducation encephalopathie infantile (stade initial a l'age adulte)" },
+    { "article": "4", "region": "neuro_musculaire", "code": "TER", "coefficient": 16,    "tarif_metropole": 35.36, "chirurgie": false, "referentiel": false, "libelle": "Enfants paralysie cerebrale / polyhandicap (prescription etablissement coordinateur)" },
+
+    { "article": "5", "region": "respiratoire", "code": "ARL", "coefficient": 8.49, "tarif_metropole": 18.76, "chirurgie": false, "referentiel": false, "libelle": "Maladies respiratoires avec desencombrement urgent (bronchiolite du nourrisson...)" },
+    { "article": "5", "region": "respiratoire", "code": "ARL", "coefficient": 8.5,  "tarif_metropole": 18.79, "chirurgie": false, "referentiel": false, "libelle": "Maladies respiratoires obstructives, restrictives ou mixtes (hors urgence)" },
+    { "article": "5", "region": "respiratoire", "code": "ARL", "coefficient": 8.51, "tarif_metropole": 18.81, "chirurgie": false, "referentiel": false, "libelle": "Reeducation respiratoire preoperatoire ou post-operatoire" },
+    { "article": "5", "region": "respiratoire", "code": "ARL", "coefficient": 10,   "tarif_metropole": 22.10, "chirurgie": false, "referentiel": false, "libelle": "Prise en charge respiratoire du patient atteint de mucoviscidose" },
+    { "article": "5", "region": "respiratoire", "code": "ARL", "coefficient": 28,   "tarif_metropole": 61.88, "chirurgie": false, "referentiel": false, "libelle": "Readaptation respiratoire BPCO/ALD - prise en charge individuelle (~1h30)" },
+    { "article": "5", "region": "respiratoire", "code": "ARL", "coefficient": 20,   "tarif_metropole": 44.20, "chirurgie": false, "referentiel": false, "libelle": "Readaptation respiratoire BPCO/ALD - groupe 2 a 4 personnes (~1h30)" },
+
+    { "article": "6", "region": "maxillo_orl", "code": "ARL", "coefficient": 7.99, "tarif_metropole": 17.66, "chirurgie": false, "referentiel": false, "libelle": "Reeducation maxillo-faciale (hors paralysie faciale)" },
+    { "article": "6", "region": "maxillo_orl", "code": "ARL", "coefficient": 8,    "tarif_metropole": 17.68, "chirurgie": false, "referentiel": false, "libelle": "Reeducation vestibulaire et des troubles de l'equilibre" },
+    { "article": "6", "region": "maxillo_orl", "code": "ARL", "coefficient": 8.01, "tarif_metropole": 17.70, "chirurgie": false, "referentiel": false, "libelle": "Reeducation des troubles de la deglutition isoles" },
+
+    { "article": "7", "region": "vasculaire", "code": "RAV", "coefficient": 8.01, "tarif_metropole": 17.70, "chirurgie": false, "referentiel": false, "libelle": "Arteriopathie des membres inferieurs (claudication, troubles trophiques)" },
+    { "article": "7", "region": "vasculaire", "code": "RAV", "coefficient": 7.99, "tarif_metropole": 17.66, "chirurgie": false, "referentiel": false, "libelle": "Insuffisance veineuse des membres inferieurs (retentissement articulaire/trophique)" },
+    { "article": "7", "region": "vasculaire", "code": "RAV", "coefficient": 8,    "tarif_metropole": 17.68, "chirurgie": false, "referentiel": false, "libelle": "Lymphoedeme vrai par drainage manuel - un membre ou cou et face" },
+    { "article": "7", "region": "vasculaire", "code": "RAV", "coefficient": 9,    "tarif_metropole": 19.89, "chirurgie": false, "referentiel": false, "libelle": "Lymphoedeme vrai par drainage manuel - deux membres" },
+    { "article": "7", "region": "vasculaire", "code": "RAV", "coefficient": 15.5, "tarif_metropole": 34.26, "chirurgie": false, "referentiel": false, "libelle": "Lymphoedeme membre sup apres cancer du sein + reeducation epaule (~60 mn, optimal 10 seances)" },
+
+    { "article": "8", "region": "abdo_perineo", "code": "RAB", "coefficient": 8.5, "tarif_metropole": 18.79, "chirurgie": false, "referentiel": false, "libelle": "Reeducation perineale active (controle manuel / electrostimulation / biofeedback)" },
+
+    { "article": "9", "region": "geriatrie", "code": "RPE", "coefficient": 8.5, "tarif_metropole": 18.79, "chirurgie": false, "referentiel": false, "libelle": "Reeducation analytique et globale des membres inf, posture, equilibre, coordination chez le sujet age", "_note": "Coefficient RPE 8,5 a reconfirmer (cellule non lisible a l'extraction)" },
+
+    { "article": "10", "region": "brulures", "code": "RPB", "coefficient": 8, "tarif_metropole": 17.68, "chirurgie": false, "referentiel": false, "libelle": "Brulures localisees a un membre ou un segment de membre" },
+    { "article": "10", "region": "brulures", "code": "RPB", "coefficient": 9, "tarif_metropole": 19.89, "chirurgie": false, "referentiel": false, "libelle": "Brulures etendues a plusieurs membres et/ou au tronc" },
+
+    { "article": "11", "region": "palliatif", "code": "PLL", "coefficient": 12, "tarif_metropole": 26.52, "chirurgie": false, "referentiel": false, "libelle": "Soins palliatifs - cotation journaliere forfaitaire (quel que soit le nombre d'interventions)" }
+  ]
+}

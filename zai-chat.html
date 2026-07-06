@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Z.ai Chat — GLM 5.2</title>
+<style>
+  :root {
+    --bg: #0d0f12;
+    --bg-soft: #15181d;
+    --bg-soft2: #1c2027;
+    --border: #2a2f38;
+    --text: #e6e9ee;
+    --text-dim: #8b94a3;
+    --accent: #4f8cff;
+    --accent-soft: #1a3050;
+    --user-bubble: #1f3a5f;
+    --ai-bubble: #1a1d23;
+    --green: #3ecf8e;
+    --red: #ff5c5c;
+    --mono: ui-monospace, "Cascadia Code", "Consolas", monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .logo {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #4f8cff, #3ecf8e);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 15px; color: #fff;
+  }
+  header h1 { font-size: 15px; font-weight: 600; }
+  header .sub { font-size: 12px; color: var(--text-dim); font-weight: 400; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  select, button {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg-soft2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 11px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  select:hover, button:hover { border-color: var(--accent); }
+  button.icon { padding: 7px 9px; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+  }
+  .status-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* ---------- Settings panel ---------- */
+  .settings {
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: none;
+    gap: 14px;
+    flex-direction: column;
+  }
+  .settings.open { display: flex; }
+  .settings .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--text-dim); }
+  .field input {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 11px;
+    min-width: 340px;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  .field input.small { min-width: 120px; }
+  .hint { font-size: 11px; color: var(--text-dim); }
+  .hint a { color: var(--accent); }
+
+  /* ---------- Chat area ---------- */
+  .chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 0;
+    scroll-behavior: smooth;
+  }
+  .chat-inner { max-width: 820px; margin: 0 auto; padding: 0 20px; }
+  .msg { display: flex; gap: 14px; margin-bottom: 26px; animation: fade .2s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  }
+  .avatar.user { background: var(--user-bubble); }
+  .avatar.ai { background: linear-gradient(135deg, #4f8cff, #3ecf8e); color:#fff; }
+  .bubble { flex: 1; padding-top: 3px; min-width: 0; }
+  .bubble .who { font-size: 12px; color: var(--text-dim); margin-bottom: 5px; font-weight: 600; }
+  .bubble .content { font-size: 15px; line-height: 1.6; word-wrap: break-word; }
+  .content p { margin-bottom: 10px; }
+  .content p:last-child { margin-bottom: 0; }
+  .content ul, .content ol { margin: 0 0 10px 22px; }
+  .content li { margin-bottom: 4px; }
+  .content pre {
+    background: #0a0c0f;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 0 0 10px;
+  }
+  .content code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg-soft2);
+    padding: 2px 5px;
+    border-radius: 4px;
+  }
+  .content pre code { background: none; padding: 0; }
+  .content table { border-collapse: collapse; margin-bottom: 10px; font-size: 14px; }
+  .content th, .content td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+  .content th { background: var(--bg-soft2); }
+  .content h1,.content h2,.content h3 { margin: 6px 0 8px; }
+  .content strong { color: #fff; }
+  .content a { color: var(--accent); }
+  .cursor::after {
+    content: '▋'; color: var(--accent);
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .empty {
+    text-align: center; color: var(--text-dim);
+    margin-top: 12vh; padding: 0 20px;
+  }
+  .empty .big { font-size: 38px; margin-bottom: 14px; }
+  .empty h2 { font-size: 20px; color: var(--text); margin-bottom: 8px; font-weight: 600; }
+  .empty p { font-size: 14px; max-width: 460px; margin: 0 auto 6px; line-height: 1.5; }
+  .chips { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+  .chip {
+    font-size: 13px; padding: 8px 14px; border-radius: 20px;
+    background: var(--bg-soft2); border: 1px solid var(--border);
+    cursor: pointer; transition: border-color .15s;
+  }
+  .chip:hover { border-color: var(--accent); }
+
+  /* ---------- Composer ---------- */
+  .composer-wrap { flex-shrink: 0; padding: 0 0 18px; background: var(--bg); }
+  .composer {
+    max-width: 820px; margin: 0 auto; padding: 0 20px;
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+  .composer textarea {
+    flex: 1;
+    font-family: var(--sans); font-size: 15px; color: var(--text);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 13px 16px;
+    resize: none;
+    max-height: 200px;
+    line-height: 1.5;
+  }
+  .composer textarea:focus { outline: none; border-color: var(--accent); }
+  .send-btn {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--accent); border: none;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .send-btn:hover { background: #3d7bf0; border:none; }
+  .send-btn:disabled { background: var(--bg-soft2); cursor: not-allowed; }
+  .send-btn svg { width: 20px; height: 20px; fill: #fff; }
+  .composer-meta {
+    max-width: 820px; margin: 8px auto 0; padding: 0 20px;
+    font-size: 11px; color: var(--text-dim);
+    display: flex; justify-content: space-between;
+  }
+  .err-banner {
+    max-width: 820px; margin: 0 auto 10px; padding: 10px 20px;
+    color: var(--red); font-size: 13px;
+  }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Z</div>
+  <div>
+    <h1>Z.ai Chat <span class="sub">· API directe</span></h1>
+  </div>
+  <div class="header-right">
+    <span class="status-dot" id="statusDot" title="Clé API non configurée"></span>
+    <select id="modelSelect" title="Modèle">
+      <option value="glm-5.2">GLM-5.2</option>
+      <option value="glm-5.2-air">GLM-5.2-Air</option>
+      <option value="glm-5.2-flash">GLM-5.2-Flash</option>
+      <option value="glm-4.6">GLM-4.6</option>
+    </select>
+    <button class="icon" id="clearBtn" title="Effacer la conversation">🗑</button>
+    <button class="icon" id="settingsBtn" title="Réglages">⚙</button>
+  </div>
+</header>
+
+<div class="settings" id="settingsPanel">
+  <div class="row">
+    <div class="field">
+      <label>Clé API Z.ai</label>
+      <input type="password" id="apiKey" placeholder="xxxxxxxx.xxxxxxxxxxxxxxxx" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="baseUrl" class="small" value="https://api.z.ai/api/paas/v4" style="min-width:300px">
+    </div>
+    <button id="saveSettings">Enregistrer</button>
+  </div>
+  <div class="hint">
+    Récupère ta clé sur <a href="https://z.ai/manage-apikey/apikey-list" target="_blank">z.ai → API Keys</a>.
+    Stockée uniquement dans ton navigateur (localStorage), jamais envoyée ailleurs que vers l'API Z.ai.
+  </div>
+</div>
+
+<div class="chat" id="chat">
+  <div class="chat-inner" id="chatInner">
+    <div class="empty" id="emptyState">
+      <div class="big">⚡</div>
+      <h2>GLM 5.2 — prêt</h2>
+      <p>Webapp chat connectée à l'API Z.ai. Configure ta clé via ⚙ puis lance-toi.</p>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+</div>
+
+<div class="composer-wrap">
+  <div class="err-banner" id="errBanner" style="display:none"></div>
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="Écris ton message… (Entrée = envoyer · Maj+Entrée = nouvelle ligne)"></textarea>
+    <button class="send-btn" id="sendBtn" title="Envoyer">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+    </button>
+  </div>
+  <div class="composer-meta">
+    <span id="modelInfo">GLM-5.2 · contexte 1M tokens</span>
+    <span id="tokenInfo"></span>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const LS = {
+  key:   'zai_api_key',
+  base:  'zai_base_url',
+  model: 'zai_model',
+  hist:  'zai_history'
+};
+
+let messages = [];        // {role, content}
+let streaming = false;
+
+// ---------- Settings persistence ----------
+function loadSettings() {
+  $('apiKey').value  = localStorage.getItem(LS.key)  || '';
+  $('baseUrl').value = localStorage.getItem(LS.base) || 'https://api.z.ai/api/paas/v4';
+  const m = localStorage.getItem(LS.model);
+  if (m) $('modelSelect').value = m;
+  updateStatus();
+  updateModelInfo();
+}
+function saveSettings() {
+  localStorage.setItem(LS.key,  $('apiKey').value.trim());
+  localStorage.setItem(LS.base, $('baseUrl').value.trim());
+  $('settingsPanel').classList.remove('open');
+  updateStatus();
+  flash('Réglages enregistrés ✓', false);
+}
+function updateStatus() {
+  const has = !!localStorage.getItem(LS.key);
+  $('statusDot').classList.toggle('ok', has);
+  $('statusDot').title = has ? 'Clé API configurée' : 'Clé API non configurée';
+}
+function updateModelInfo() {
+  $('modelInfo').textContent = $('modelSelect').value.toUpperCase() + ' · contexte 1M tokens';
+}
+
+// ---------- History persistence ----------
+function saveHistory() { localStorage.setItem(LS.hist, JSON.stringify(messages)); }
+function loadHistory() {
+  try {
+    const h = JSON.parse(localStorage.getItem(LS.hist) || '[]');
+    if (Array.isArray(h) && h.length) {
+      messages = h;
+      messages.forEach(m => renderMessage(m.role, m.content, false));
+      $('emptyState').style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+// ---------- Minimal markdown ----------
+function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function mdToHtml(md) {
+  // code blocks first
+  const blocks = [];
+  md = md.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {
+    blocks.push('<pre><code>' + escapeHtml(code.replace(/\n$/,'')) + '</code></pre>');
+    return '\x00BLOCK' + (blocks.length-1) + '\x00';
+  });
+  md = escapeHtml(md);
+  // tables
+  md = md.replace(/(^\|.+\|\n\|[ :|-]+\|\n(?:\|.*\|\n?)*)/gm, tbl => {
+    const rows = tbl.trim().split('\n').filter(r => r.trim());
+    if (rows.length < 2) return tbl;
+    const head = rows[0].split('|').slice(1,-1).map(c=>c.trim());
+    const body = rows.slice(2).map(r => r.split('|').slice(1,-1).map(c=>c.trim()));
+    let h = '<table><thead><tr>' + head.map(c=>'<th>'+c+'</th>').join('') + '</tr></thead><tbody>';
+    h += body.map(r => '<tr>' + r.map(c=>'<td>'+c+'</td>').join('') + '</tr>').join('');
+    return h + '</tbody></table>';
+  });
+  md = md
+    .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.*)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  // lists
+  md = md.replace(/(?:^[-*] .*(?:\n|$))+/gm, m => {
+    const items = m.trim().split('\n').map(l => '<li>'+l.replace(/^[-*] /,'')+'</li>').join('');
+    return '<ul>'+items+'</ul>';
+  });
+  md = md.replace(/(?:^\d+\. .*(?:\n|$))+/gm, m => {
+    const items = m.trim().split('\n').map(l => '<li>'+l.replace(/^\d+\. /,'')+'</li>').join('');
+    return '<ol>'+items+'</ol>';
+  });
+  // paragraphs
+  md = md.split(/\n{2,}/).map(b => {
+    if (/^\s*<(ul|ol|pre|table|h\d|blockquote)/.test(b)) return b;
+    return '<p>' + b.replace(/\n/g,'<br>') + '</p>';
+  }).join('');
+  md = md.replace(/\x00BLOCK(\d+)\x00/g, (m,i)=>blocks[+i]);
+  return md;
+}
+
+// ---------- Rendering ----------
+function renderMessage(role, content, animate=true) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg';
+  const isUser = role === 'user';
+  wrap.innerHTML = `
+    <div class="avatar ${isUser?'user':'ai'}">${isUser?'🧑':'Z'}</div>
+    <div class="bubble">
+      <div class="who">${isUser?'Toi':'GLM 5.2'}</div>
+      <div class="content"></div>
+    </div>`;
+  if (!animate) wrap.style.animation = 'none';
+  const contentEl = wrap.querySelector('.content');
+  contentEl.innerHTML = isUser ? escapeHtml(content).replace(/\n/g,'<br>') : mdToHtml(content);
+  $('chatInner').appendChild(wrap);
+  scrollDown();
+  return contentEl;
+}
+function scrollDown() { const c=$('chat'); c.scrollTop = c.scrollHeight; }
+function flash(msg, isErr=true) {
+  const b = $('errBanner');
+  b.textContent = msg;
+  b.style.color = isErr ? 'var(--red)' : 'var(--green)';
+  b.style.display = 'block';
+  setTimeout(()=>{ b.style.display='none'; }, isErr?6000:2500);
+}
+
+// ---------- Send / stream ----------
+async function send() {
+  if (streaming) return;
+  const text = $('input').value.trim();
+  if (!text) return;
+  const apiKey = localStorage.getItem(LS.key);
+  if (!apiKey) { flash('Configure ta clé API d\'abord (⚙).'); $('settingsPanel').classList.add('open'); return; }
+
+  $('emptyState').style.display = 'none';
+  $('input').value = ''; autoGrow();
+  messages.push({role:'user', content:text});
+  renderMessage('user', text);
+  saveHistory();
+
+  streaming = true; $('sendBtn').disabled = true;
+  const contentEl = renderMessage('assistant', '');
+  contentEl.classList.add('cursor');
+  let acc = '';
+
+  const base = (localStorage.getItem(LS.base) || 'https://api.z.ai/api/paas/v4').replace(/\/$/,'');
+  const model = $('modelSelect').value;
+
+  try {
+    const res = await fetch(base + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+apiKey },
+      body: JSON.stringify({ model, messages, stream: true, temperature: 0.7 })
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error('HTTP '+res.status+' — '+t.slice(0,200));
+    }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        const l = line.trim();
+        if (!l.startsWith('data:')) continue;
+        const data = l.slice(5).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const j = JSON.parse(data);
+          const delta = j.choices?.[0]?.delta?.content || '';
+          if (delta) {
+            acc += delta;
+            contentEl.innerHTML = mdToHtml(acc);
+            scrollDown();
+          }
+        } catch(e) {}
+      }
+    }
+    contentEl.classList.remove('cursor');
+    contentEl.innerHTML = mdToHtml(acc);
+    messages.push({role:'assistant', content:acc});
+    saveHistory();
+  } catch(err) {
+    contentEl.classList.remove('cursor');
+    contentEl.innerHTML = '<p style="color:var(--red)">⚠ '+escapeHtml(err.message)+'</p>';
+    flash('Erreur API : '+err.message);
+    messages.pop(); // remove the failed user-turn pairing? keep user msg, drop empty assistant
+  } finally {
+    streaming = false; $('sendBtn').disabled = false;
+    $('input').focus();
+  }
+}
+
+// ---------- UI wiring ----------
+function autoGrow() {
+  const t = $('input');
+  t.style.height = 'auto';
+  t.style.height = Math.min(t.scrollHeight, 200) + 'px';
+}
+$('input').addEventListener('input', autoGrow);
+$('input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+$('sendBtn').addEventListener('click', send);
+$('settingsBtn').addEventListener('click', () => $('settingsPanel').classList.toggle('open'));
+$('saveSettings').addEventListener('click', saveSettings);
+$('modelSelect').addEventListener('change', () => {
+  localStorage.setItem(LS.model, $('modelSelect').value);
+  updateModelInfo();
+});
+$('clearBtn').addEventListener('click', () => {
+  if (!confirm('Effacer toute la conversation ?')) return;
+  messages = [];
+  localStorage.removeItem(LS.hist);
+  document.querySelectorAll('.msg').forEach(m=>m.remove());
+  $('emptyState').style.display = 'block';
+});
+
+// suggestion chips
+const SUGGESTIONS = [
+  "Explique GLM 5.2 en 3 points",
+  "Écris un script Ruby de scraping",
+  "Pitch automation IA pour une PME",
+  "Workflow n8n : webhook → Claude → Sheets"
+];
+const chipsEl = $('chips');
+SUGGESTIONS.forEach(s => {
+  const c = document.createElement('div');
+  c.className = 'chip'; c.textContent = s;
+  c.onclick = () => { $('input').value = s; autoGrow(); $('input').focus(); };
+  chipsEl.appendChild(c);
+});
+
+loadSettings();
+loadHistory();
+$('input').focus();
+</script>
+</body>
+</html>
