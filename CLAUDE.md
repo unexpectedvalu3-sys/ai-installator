@@ -1,126 +1,88 @@
-# AI Installator — Projet Agence IA Automation PME
+# CLAUDE.md — AI Installator (Agence IA Automation, verticale courtage)
 
-## Contexte projet
-Agence IA automation pour PME françaises. Stack : Claude API + n8n + Ruby.
-Premier client cible : PME 5-50 salariés, ticket 500-3000€.
-Pack RGPD déjà livré = proof-of-concept #1.
-
-## Mémoire projets liés (contexte historique)
-- Historique agence IA + pack RGPD livré : C:\Users\test\Documents\Claude\MEMORY\memory\project_entrepreneur.md
-- Profil Enzo complet : C:\Users\test\Documents\Claude\MEMORY\memory\core_profile.md
-- Contexte tech (VirtualBox, Serato, Claude API) : C:\Users\test\Documents\Claude\MEMORY\memory\context\tech.md
-
-## Skills à utiliser pour ce projet
-
-Pour toute question stratégique sur ce projet, utiliser en priorité les skills du plugin **tech-strategist** :
-
-| Besoin | Skill |
-|--------|-------|
-| Analyse marché / nouveaux entrants | `/tech-strategist:market-map` |
-| Intelligence concurrentielle | `/tech-strategist:competitive-radar` |
-| Scorer une opportunité (ATOM) | `/tech-strategist:opp-radar` |
-| Prévisions marché 6-24 mois | `/tech-strategist:trend-forecast` |
-| Pitch client PME | `/tech-strategist:b2b-pitch-builder` |
-| Stack technique / architecture | `/tech-strategist:code-velocity` |
-| Recherche exhaustive (sources réelles) | `/deep-research` |
-| Brief hebdo marché IA | `/tech-strategist:weekly-brief` |
+> Fichier projet. Le contrat global (identité, méthode, garde-fous, style) vit dans `C:\Users\test\CLAUDE.md`. Ici = **contexte agence + discipline + architecture + n8n-MCP**.
 
 ---
 
-## n8n-MCP System Prompt
+## 1. Contexte & positionnement
+Agence d'**automatisation IA pour PME françaises** (marque mère **Lumaaria / AI Installator**). Stack : **Claude API + n8n + Ruby/Python**. Client cible : PME 5-50 salariés, ticket **500-3000€**.
 
-You are an expert in n8n automation software using n8n-MCP tools. Your role is to design, build, and validate n8n workflows with maximum accuracy and efficiency.
+**Verticale actée : courtage assurance** (pas de la « conformité IA vendue par la peur »).
+- **Pourquoi mener par la valeur** : le Digital Omnibus (UE, 16/06/2026) a repoussé les obligations lourdes AI Act (Annexe III) du 02/08/2026 au **02/12/2027**. La conformité = argument **secondaire** ; la valeur (gain de temps, ROI chiffré) mène.
+- **Pourquoi le courtage** : marché fragmenté, petits cabinets sans DSI, docs non structurés (terrain LLM idéal), commissions récurrentes (rétention), devoir de conseil DDA (douleur durable), souveraineté via stack local FR possible.
+- **Posture légale** : pas d'agrément requis ; « diagnostic informatif, pas avis juridique » ; se couvrir contractuellement (convention sous-traitance art. 28).
 
-## Core Principles
+Détail stratégie : `MEMORY/memory/agence-courtage-strategie.md`.
 
-### 1. Silent Execution
-CRITICAL: Execute tools without commentary. Only respond AFTER all tools complete.
+## 2. Sous-projets (verticales)
+| Vertical | État | Mémoire |
+|----------|------|---------|
+| **Modul'R (tante, client pilote)** | App FastAPI déployée Railway, 3 outils (extraction CRM / comparateur mutuelle / fiche DDA) | `modulr-import-tante.md` |
+| **KinéCotation** | Copilote NGAP, prototype + 82 actes + OCR + web app MVP | `kine-cotation-project.md` |
+| **Artisan peintre** | Devis/facture, stade cadrage | `artisan-peintre-project.md` |
+| **DocInvy** (SaaS proof) | Live, Render+Neon, Factur-X MINIMUM | `docinvy-infra.md` |
 
-### 2. Parallel Execution
-When operations are independent, execute them in parallel for maximum performance.
+## 3. Discipline (risque n°1 = builder sans vendre)
+- ~**50% discovery client** / ~35% appropriation de l'existant (pipeline, app) / ~15% admin-veille.
+- **Une semaine sans avoir parlé à un courtier = une semaine de recul.**
+- Sur l'app existante : comprendre assez pour **vendre / déployer / réparer sous pression**, pas réécrire de zéro. Décortiquer bloc par bloc, casser, réparer.
 
-### 3. Templates First
-ALWAYS check templates before building from scratch (2,352 available).
+## 4. Architecture (patterns non négociables)
+1. **Perception LLM / décision déterministe séparées** — le LLM extrait les faits (OCR, lecture devis), un moteur déterministe calcule (CSV Modul'R, cotation NGAP). Le LLM ne produit jamais un montant.
+2. **Provider IA abstrait** (`_call_llm`) — basculable Mistral EU / local pour la prod RGPD.
+3. **Dual-model par coût** — prose fine FR sur Claude (Sonnet/Opus) ; bulk pas cher sur **GLM 5.2** via OpenRouter (`z-ai/glm-5.2`, clé dans `.openclaw/.env`). ⚠️ modèle à raisonnement → `reasoning:{enabled:false}` sinon `content` vide.
+4. **Fail-closed** — auth middleware sur toutes les routes ; entrée invalide → erreur propre (jamais 500 nu) ; secrets + PII exclus du repo (`.railwayignore`).
+5. **RGPD by design** — pas d'IBAN ni de données de santé stockées ; métier santé → HDS si stockage → MVP local sans stockage.
 
-### 4. Multi-Level Validation
-Use validate_node(mode='minimal') → validate_node(mode='full') → validate_workflow pattern.
+## 5. Setup légal facturation
+Pas de tampon obligatoire en France. Mentions requises : dénomination + forme juridique, SIREN/SIRET, RCS + greffe, TVA intra (si assujetti). **Statut d'Enzo (SASU vs EURL) pas encore tranché** → devis/factures génériques ou signaler le manque. Détail : `MEMORY/memory/ai-installator-legal-setup.md`.
 
-### 5. Never Trust Defaults
-CRITICAL: Default parameter values are the #1 source of runtime failures.
-ALWAYS explicitly configure ALL parameters that control node behavior.
+## 6. Skills à privilégier
+| Besoin | Skill |
+|--------|-------|
+| Analyse marché / nouveaux entrants | `/market-map` |
+| Intelligence concurrentielle | `/competitive-radar` |
+| Scorer une opportunité (ATOM) | `/opp-radar` |
+| Prévisions marché 6-24 mois | `/trend-forecast` |
+| Pitch client PME | `/b2b-pitch` |
+| Stack / archi | `/code-velocity` |
+| Recherche exhaustive | `/deep-research` |
+| Brief hebdo marché IA | `/weekly-brief` |
 
-## Workflow Process
+---
 
-1. **Start**: Call `tools_documentation()` for best practices
+## 7. n8n-MCP — System Prompt
 
-2. **Template Discovery Phase** (FIRST - parallel when searching multiple)
-   - `search_templates({searchMode: 'by_metadata', complexity: 'simple'})` - Smart filtering
-   - `search_templates({searchMode: 'by_task', task: 'webhook_processing'})` - Curated by task
-   - `search_templates({query: 'slack notification'})` - Text search
-   - `search_templates({searchMode: 'by_nodes', nodeTypes: ['n8n-nodes-base.slack']})` - By node type
+Expert n8n automation via n8n-MCP tools. Rôle : concevoir, construire, valider des workflows avec précision maximale.
 
-3. **Node Discovery** (if no suitable template - parallel execution)
-   - `search_nodes({query: 'keyword', includeExamples: true})`
-   - `search_nodes({query: 'trigger'})`
-   - `search_nodes({query: 'AI agent langchain'})`
+### Core Principles
+1. **Silent Execution** — exécuter les tools sans commentaire, répondre APRÈS.
+2. **Parallel Execution** — opérations indépendantes en parallèle.
+3. **Templates First** — toujours vérifier les templates avant de partir de zéro.
+4. **Multi-Level Validation** — `validate_node(minimal)` → `validate_node(full)` → `validate_workflow`.
+5. **Never Trust Defaults** — les valeurs par défaut sont la source n°1 des échecs runtime. Configurer explicitement TOUS les paramètres qui pilotent le comportement d'un node.
 
-4. **Configuration Phase** (parallel for multiple nodes)
-   - `get_node({nodeType, detail: 'standard', includeExamples: true})`
-   - `get_node({nodeType, detail: 'full'})`
+### Workflow Process
+1. **Start** : `tools_documentation()` pour les best practices.
+2. **Template Discovery** (parallèle) : `search_templates` par metadata / task / node type / texte.
+3. **Node Discovery** (si pas de template) : `search_nodes({query, includeExamples:true})`.
+4. **Configuration** (parallèle) : `get_node({nodeType, detail:'standard'|'full', includeExamples:true})`.
+5. **Validation** : `validate_node(minimal)` → `validate_node(full, profile:'runtime')` → fixer TOUTES les erreurs.
+6. **Building** : templates d'abord (`get_template(id, {mode:'full'})`) · TOUS les params explicites · error handling · expressions `$json`, `$node["Name"].json`.
+7. **Workflow Validation** : `validate_workflow` / `_connections` / `_expressions`.
+8. **Deployment** : `n8n_create_workflow` → `n8n_validate_workflow({id})` → `n8n_test_workflow({workflowId})`.
 
-5. **Validation Phase**
-   - `validate_node({nodeType, config, mode: 'minimal'})`
-   - `validate_node({nodeType, config, mode: 'full', profile: 'runtime'})`
-   - Fix ALL errors before proceeding
+### Warnings
+- **Defaults FAILS** : `{resource:"message", operation:"post", text:"Hello"}` casse au runtime → tout expliciter (`select:"channel", channelId:"C123", …`).
+- **IF multi-output** : `addConnection` avec `branch:"true"` / `branch:"false"`.
 
-6. **Building Phase**
-   - Check templates first : `get_template(templateId, {mode: "full"})`
-   - EXPLICITLY set ALL parameters - never rely on defaults
-   - Add error handling
-   - Use n8n expressions : $json, $node["NodeName"].json
+### Nodes les plus utilisés
+`code` · `httpRequest` · `webhook` · `set` · `if` · `scheduleTrigger` · `@n8n/n8n-nodes-langchain.agent` · `googleSheets` · `@n8n/n8n-nodes-langchain.lmChatOpenAi` · `gmail`.
 
-7. **Workflow Validation** (before deployment)
-   - `validate_workflow(workflow)`
-   - `validate_workflow_connections(workflow)`
-   - `validate_workflow_expressions(workflow)`
-
-8. **Deployment**
-   - `n8n_create_workflow(workflow)` - Deploy to localhost:5678
-   - `n8n_validate_workflow({id})` - Post-deployment check
-   - `n8n_test_workflow({workflowId})` - Test execution
-
-## Critical Warnings
-
-### Never Trust Defaults
-```json
-// FAILS at runtime
-{resource: "message", operation: "post", text: "Hello"}
-
-// WORKS - all parameters explicit
-{resource: "message", operation: "post", select: "channel", channelId: "C123", text: "Hello"}
-```
-
-### IF Node Multi-Output Routing
-```json
-{type: "addConnection", source: "If Node", target: "True Handler", sourcePort: "main", targetPort: "main", branch: "true"}
-{type: "addConnection", source: "If Node", target: "False Handler", sourcePort: "main", targetPort: "main", branch: "false"}
-```
-
-## Most Popular n8n Nodes
-
-1. `n8n-nodes-base.code` - JavaScript/Python scripting
-2. `n8n-nodes-base.httpRequest` - HTTP API calls
-3. `n8n-nodes-base.webhook` - Event-driven triggers
-4. `n8n-nodes-base.set` - Data transformation
-5. `n8n-nodes-base.if` - Conditional routing
-6. `n8n-nodes-base.scheduleTrigger` - Time-based triggers
-7. `@n8n/n8n-nodes-langchain.agent` - AI agents
-8. `n8n-nodes-base.googleSheets` - Spreadsheet integration
-9. `@n8n/n8n-nodes-langchain.lmChatOpenAi` - OpenAI chat
-10. `n8n-nodes-base.gmail` - Email automation
+---
 
 ## Setup technique
-- n8n local : http://localhost:5678
-- Claude API : claude-sonnet-4-6 (défaut), claude-opus-4-5 (tâches complexes)
-- MCP connecté : n8n-mcp (stdio)
-- Stack Ruby + n8n + Claude API
+- **n8n** : http://localhost:5678 · MCP `n8n-mcp` (stdio) · `NODE_FUNCTION_ALLOW_BUILTIN=fs,path`.
+- **Claude API** : nouveau build → modèle le plus capable (Fable 5 / Opus 4.8 / Sonnet 5). Existant : extraction = Sonnet, tâches complexes = `claude-opus-4-8`.
+- **Stack** : Ruby + n8n + Claude API. Clé Anthropic : `modulr-app/.env`.
+- **Dernière réécriture** : 2026-07-09.
