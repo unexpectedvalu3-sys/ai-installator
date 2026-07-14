@@ -37,7 +37,9 @@ DATA.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="Comparateur Courtier")
 
 # Chemins publics (accessibles sans session). Tout le reste exige une session.
+# /static/* est public : l'icône (mascotte.png) doit s'afficher sur la page de login.
 PUBLIC_PATHS = {"/login", "/logout", "/healthz"}
+PUBLIC_PREFIXES = ("/static/",)
 
 
 @app.middleware("http")
@@ -51,7 +53,7 @@ async def require_session(request: Request, call_next):
             "<h1>Configuration incomplète</h1><p>APP_USER, APP_PASSWORD_HASH et "
             "SECRET_KEY doivent être définis (voir set_password.py).</p>",
             status_code=503)
-    if path in PUBLIC_PATHS:
+    if path in PUBLIC_PATHS or any(path.startswith(p) for p in PUBLIC_PREFIXES):
         return await call_next(request)
     token = request.cookies.get(auth.COOKIE_NAME)
     if token and auth.read_session_token(token):
