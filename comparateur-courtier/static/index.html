@@ -46,6 +46,7 @@
     <b>Comparateur Courtier</b>
     <span class="sp"></span>
     <a href="/logout">Déconnexion</a>
+    <button id="btnUpdate" onclick="checkUpdate()" style="margin-left:8px;padding:6px 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--teal);cursor:pointer;font-weight:600;font-size:.85rem">🔄 Mises à jour</button>
   </div>
   <div class="wrap">
     <h1>Vos outils</h1>
@@ -66,5 +67,21 @@
     </div>
     <footer>Outil interne du cabinet — aucune donnée de santé n'est collectée ni stockée.</footer>
   </div>
-</body>
+<script>
+async function checkUpdate(){
+  const btn=document.getElementById('btnUpdate');
+  btn.textContent='🔄 Vérification…'; btn.disabled=true;
+  try{
+    const r=await fetch('/update');
+    const d=await r.json();
+    if(d.error){alert(d.error);btn.textContent='🔄 Mises à jour';btn.disabled=false;return;}
+    if(!d.update_available){alert('Aucune mise à jour disponible.');btn.textContent='🔄 Mises à jour';btn.disabled=false;return;}
+    if(confirm('Mise à jour '+d.tag+' disponible.\n\nCliquer sur OK pour télécharger et installer.\nL\'application va redémarrer automatiquement.')){
+      btn.textContent='⬇️ Téléchargement…';
+      fetch('/update',{method:'POST'}).then(()=>{}).catch(()=>{});
+      setTimeout(()=>{document.body.innerHTML='<div style="text-align:center;padding:80px;font-family:sans-serif"><h2>Mise à jour en cours…</h2><p>L\'application va redémarrer dans quelques secondes. Rechargez cette page.</p></div>';},2000);
+    }else{btn.textContent='🔄 Mises à jour';btn.disabled=false;}
+  }catch(e){alert('Erreur: '+e);btn.textContent='🔄 Mises à jour';btn.disabled=false;}
+}
+</script></body>
 </html>

@@ -110,6 +110,93 @@ def healthz():
     return {"status": "ok"}
 
 
+# ---------------------------------------------------------------- Mise à jour
+@app.get("/update")
+def update_check():
+    """Vérifie GitHub Releases pour une nouvelle version de l'exe.
+    Renvoie JSON {update_available, tag, url} ou {error}."""
+    import urllib.request, urllib.error, json, os, sys
+    repo = "unexpectedvalu3-sys/ai-installator"
+    asset_name = "ComparateurCourtier.exe"
+    try:
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{repo}/releases/latest",
+            headers={"User-Agent": "ComparateurCourtier"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            release = json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return {"update_available": False, "tag": "", "url": ""}
+        return JSONResponse({"error": f"Impossible de vérifier : {e}"}, status_code=502)
+    except Exception as e:
+        return JSONResponse({"error": f"Impossible de vérifier : {e}"}, status_code=502)
+    tag = release.get("tag_name", "")
+    asset_url = None
+    for a in release.get("assets", []):
+        if a.get("name", "").lower() == asset_name.lower():
+            asset_url = a["browser_download_url"]
+            break
+    if not tag or not asset_url:
+        return {"update_available": False, "tag": tag or "", "url": ""}
+    # version actuelle = date de l'exe (approx.) ; on compare par tag
+    # si la release existe et contient l'asset, on propose la maj
+    return {"update_available": True, "tag": tag, "url": asset_url,
+            "notes": (release.get("body") or "")[:500]}
+
+
+@app.post("/update")
+async def update_apply():
+    """Télécharge le nouvel exe, remplace l'exe en cours, relance.
+    L'exe actuel se termine -> le navigateur perdra la connexion pendant ~3s."""
+    import urllib.request, urllib.error, json, os, sys, subprocess, time
+    from pathlib import Path
+    repo = "unexpectedvalu3-sys/ai-installator"
+    asset_name = "ComparateurCourtier.exe"
+    try:
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{repo}/releases/latest",
+            headers={"User-Agent": "ComparateurCourtier"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            release = json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return JSONResponse({"error": "Aucune mise à jour disponible."}, status_code=404)
+        return JSONResponse({"error": f"Impossible de vérifier : {e}"}, status_code=502)
+    asset_url = None
+    for a in release.get("assets", []):
+        if a.get("name", "").lower() == asset_name.lower():
+            asset_url = a["browser_download_url"]
+            break
+    if not asset_url:
+        return JSONResponse({"error": "Aucune mise à jour disponible."}, status_code=404)
+    # télécharge
+    try:
+        req = urllib.request.Request(asset_url, headers={"User-Agent": "ComparateurCourtier"})
+        with urllib.request.urlopen(req, timeout=180) as r:
+            data = r.read()
+    except Exception as e:
+        return JSONResponse({"error": f"Échec du téléchargement : {e}"}, status_code=502)
+    # remplace l'exe (rename trick Windows)
+    if getattr(sys, "frozen", False):
+        exe = Path(sys.executable)
+    else:
+        exe = Path(sys.argv[0]).resolve()
+    tmp = exe.with_suffix(".exe.new")
+    old = exe.with_suffix(".exe.old")
+    try:
+        tmp.write_bytes(data)
+        if old.exists():
+            old.unlink()
+        exe.rename(old)
+        tmp.rename(exe)
+    except Exception as e:
+        return JSONResponse({"error": f"Échec du remplacement : {e}"}, status_code=500)
+    # relance le nouvel exe et quitte
+    subprocess.Popen([str(exe)], cwd=str(exe.parent))
+    time.sleep(1)
+    os._exit(0)
+
+
 # ---------------------------------------------------------------- Accueil
 @app.get("/", response_class=HTMLResponse)
 def index():
