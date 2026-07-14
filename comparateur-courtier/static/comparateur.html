@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparateur de garanties — Mutuelle santé</title>
+<style>
+  :root{--bg:#fdf6f2;--card:#fff;--ink:#43392f;--mut:#948a80;--line:#efe4dc;--indigo:#e07856;--violet:#e89478;--teal:#4f9e92;--ok:#4f9e92;--warn:#c98a3a;--r:14px}
+  *{box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:26px 18px;line-height:1.5}
+  .wrap{max-width:960px;margin:0 auto}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .logo{width:42px;height:42px;border-radius:13px;background:#fae4d8;display:flex;align-items:center;justify-content:center;font-size:22px}
+  h1{font-size:21px;font-weight:600;margin:0}
+  .sub{color:var(--mut);font-size:13.5px;margin:2px 0 14px}
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tabs a{padding:9px 14px;font-size:14px;font-weight:600;color:var(--mut);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabs a:hover{color:var(--ink)} .tabs a.on{color:#8a3f27;border-bottom-color:var(--indigo)}
+  .drop{border:2px dashed #f0b79e;border-radius:var(--r);padding:24px;text-align:center;background:#fff;cursor:pointer}
+  .drop.hi{border-color:var(--indigo);background:#fdf1ec}
+  .drop b{display:block;font-size:16px;margin:6px 0 2px}.drop span{color:var(--mut);font-size:13px}
+  .files{font-size:13px;color:#bf5334;margin:10px 0 0;font-weight:600}
+  .files .fchip{display:inline-flex;align-items:center;gap:6px;background:#fdf1ec;border:1px solid #f4cbb6;border-radius:8px;padding:3px 9px;margin:3px 5px 0 0;font-weight:500;color:var(--ink)}
+  .files .fchip b{cursor:pointer;color:#bf5334;font-weight:700}
+  .files .clrsel{cursor:pointer;text-decoration:underline;color:var(--mut);font-weight:600;margin-left:6px}
+  button{font:inherit;cursor:pointer;border-radius:11px;border:1px solid var(--line);background:#fff;padding:11px 16px}
+  .primary{background:var(--indigo);color:#fff;border:none;font-weight:600;width:100%;padding:14px;font-size:15px;margin-top:10px}
+  .primary:disabled{opacity:.45;cursor:default}
+  .spin{font-size:14px;color:var(--mut);text-align:center;margin-top:14px}
+  .progress{margin-top:14px;text-align:center}
+  .progress .bar{height:6px;background:#f6e7df;border-radius:99px;overflow:hidden;margin-top:10px}
+  .progress .bar>i{display:block;height:100%;width:0;background:var(--indigo);border-radius:99px;animation:prog 20s ease-out forwards}
+  @keyframes prog{0%{width:5%}10%{width:20%}30%{width:40%}55%{width:60%}75%{width:75%}90%{width:88%}100%{width:93%}}
+  .progress .steps{font-size:12px;color:var(--mut);margin-top:8px;min-height:18px}
+  .err{background:#fbe7ec;color:#a33f52;border-radius:10px;padding:10px 12px;font-size:13px;margin-top:12px}
+  .hidden{display:none}
+  table{border-collapse:collapse;width:100%;margin-top:18px;font-size:13px;background:#fff;border-radius:var(--r);overflow:hidden;box-shadow:0 1px 3px rgba(60,40,30,.06)}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  thead th{background:#faf0ea;font-weight:700;position:sticky;top:0}
+  th.poste,td.poste{background:#fdf6f2;font-weight:600;width:250px;color:#6b5c50}
+  tr.modrow .modh{background:#fbeadf;color:#8a3f27;font-weight:700;text-transform:uppercase;letter-spacing:.3px;font-size:12px}
+  tr.tarif td{background:#fdf1ec;font-weight:600}
+  .picked{background:#cdefd9 !important}
+  thead th.picked{background:#a3dcb6 !important}
+  .offer h3{margin:0;font-size:14px}.offer .f{font-size:12px;color:var(--mut);font-weight:400}
+  .offer .cot{font-size:13px;font-weight:700;color:var(--indigo);margin-top:3px}
+  .offer.picked{box-shadow:inset 0 0 0 2px var(--indigo)}
+  .pick{margin-top:6px;font-size:11.5px;font-weight:600;color:var(--mut);display:flex;align-items:center;gap:4px;cursor:pointer}
+  .pick input{cursor:pointer;margin:0}
+  .recobox{background:#e9f1ef;border:1px solid #c7e2db;border-radius:var(--r);padding:13px 15px;margin-top:18px}
+  .recobox b{color:#2e5f58}
+  .warn{background:#fbf0e1;color:#96631f;border-radius:10px;padding:9px 12px;font-size:12.5px;margin-top:12px}
+  .synthbox{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-top:18px}
+  .synthbox h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
+  textarea{width:100%;min-height:180px;font:inherit;font-size:14px;padding:11px;border:1px solid var(--line);border-radius:10px;resize:vertical}
+  .actions{display:flex;gap:10px;margin-top:18px}
+  .actions button{flex:1;font-weight:600}
+  .copy{background:var(--ink);color:#fff;border:none}
+  .synthprint{display:none;white-space:pre-wrap;font-size:13px;line-height:1.6}
+  .sessbox{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px 15px;margin-bottom:16px}
+  .sessbox .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0}
+  .sessbox input{flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13.5px}
+  .sesslist{margin-top:8px;font-size:13px}
+  .sessitem{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .sessitem:last-child{border-bottom:0}
+  .sessitem b{flex:1;cursor:pointer;font-weight:600}
+  .sessitem b:hover{color:var(--indigo)}
+  .sessitem .d{color:var(--mut);font-size:11px}
+  .sessitem .del{color:#a33f52;cursor:pointer;font-size:13px}
+  @media print{.sub,.drop,.actions,.nav,.tabs,#go,#spin,.copy,.pick,.row,.sessbox{display:none}.synthprint{display:block}#synth{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><div class="logo">⚖️</div><div><h1>Comparateur de garanties</h1></div></div>
+  <div class="tabs">
+    <a href="/">Accueil</a>
+    <a href="/comparateur" class="on">⚖️ Comparateur</a>
+    <a href="/fiche-dda">📝 Fiche DDA</a>
+    <a href="/logout" style="margin-left:auto">Déconnexion</a>
+  </div>
+  <p class="sub">Mutuelle santé — dépose les devis assureurs, l'IA aligne les garanties et rédige une synthèse client. <span style="color:var(--teal)">Moteur : GLM 5.2</span></p>
+
+  <div class="sessbox">
+    <div class="row">
+      <input id="sessNom" placeholder="Nom de la session (ex : DUPONT — santé)">
+      <button id="sessSave">💾 Enregistrer</button>
+      <button id="sessNew">🆕 Nouvelle session</button>
+    </div>
+    <div class="sesslist" id="sessList"></div>
+  </div>
+
+  <div class="drop" id="drop">
+    <div style="font-size:28px">📄</div>
+    <b>Glisse les devis (2 à 5 PDF)</b>
+    <span>un assureur par fichier — glisse-les un par un ou tous d'un coup</span>
+    <input type="file" id="file" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg">
+    <div class="files" id="filelist"></div>
+  </div>
+  <button class="primary" id="go" disabled>⚖️ Comparer les garanties</button>
+  <div class="progress hidden" id="spin">
+    <div style="font-size:14px;color:var(--mut)">⚖️ Analyse des devis en cours…</div>
+    <div class="bar"><i></i></div>
+    <div class="steps" id="steps">Envoi des devis au serveur…</div>
+  </div>
+  <div class="err hidden" id="err"></div>
+
+  <div id="result" class="hidden"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+let picked=[],_stepTimer=null;
+const drop=$("#drop"),fileInput=$("#file");
+drop.onclick=()=>fileInput.click();
+["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("hi")}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("hi")}));
+drop.addEventListener("drop",ev=>addFiles(ev.dataTransfer.files));
+fileInput.onchange=()=>{addFiles(fileInput.files);fileInput.value="";};
+function fkey(f){return f.name+"|"+f.size;}
+function addFiles(list){const seen=new Set(picked.map(fkey));[...list].forEach(f=>{if(picked.length<5&&!seen.has(fkey(f))){picked.push(f);seen.add(fkey(f));}});renderFiles();}   // accumule, max 5
+function renderFiles(){
+  $("#filelist").innerHTML=picked.length?picked.map((f,i)=>`<span class="fchip">${f.name}<b data-i="${i}" title="retirer">✕</b></span>`).join("")+(picked.length>=5?' <span style="color:#96631f">— max 5 atteint</span>':'')+' <a class="clrsel">vider</a>':"";
+  $("#go").disabled=picked.length<2;
+  document.querySelectorAll("#filelist .fchip b").forEach(b=>b.onclick=()=>{picked.splice(+b.dataset.i,1);renderFiles();});
+  const cs=document.querySelector("#filelist .clrsel");if(cs)cs.onclick=()=>{picked=[];renderFiles();};
+}
+function setFiles(l){addFiles(l);}
+
+$("#go").onclick=async()=>{
+  $("#err").classList.add("hidden");$("#spin").classList.remove("hidden");$("#go").disabled=true;
+  const stepsEl=$("#steps");
+  const steps=["Envoi des devis au serveur…","Lecture des PDF…","Extraction des garanties…","Alignement sur la grille standard…","Rédaction de la synthèse client… (jusqu'à ~1 min)"];
+  let si=0;stepsEl.textContent=steps[0];
+  _stepTimer=setInterval(()=>{si=Math.min(si+1,steps.length-1);stepsEl.textContent=steps[si];},4000);  // clamp : ne reboucle plus au début
+  const fd=new FormData();picked.forEach(f=>fd.append("files",f));
+  try{
+    const r=await fetch("/comparer",{method:"POST",body:fd});const d=await r.json();
+    if(!r.ok)throw new Error(d.error||"Erreur de comparaison");render(d);
+  }catch(e){$("#err").textContent="⚠️ "+e.message;$("#err").classList.remove("hidden");}
+  finally{clearInterval(_stepTimer);$("#spin").classList.add("hidden");$("#go").disabled=false;}
+};
+
+function norm(s){return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
+function recoIndex(d){
+  const t=norm(d.recommandation&&d.recommandation.offre);if(!t)return -1;
+  return (d.offres||[]).findIndex(o=>{const k=norm(o.assureur+" "+o.formule);return t.includes(norm(o.assureur))||k.includes(t)||t.includes(norm(o.formule));});
+}
+function esc(s){return (s||"").toString().replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+function render(d,keepScroll){
+  window._cmp=d;
+  const ri=recoIndex(d);const nOff=(d.offres||[]).length;
+  const sel=(d._selectedIdx!==undefined&&d._selectedIdx!==null&&d._selectedIdx<nOff)?d._selectedIdx:(ri>=0?ri:0);
+  let head='<tr><th class="poste">Garantie</th>'+(d.offres||[]).map((o,i)=>
+    `<th class="offer${i===ri?' reco':''}${i===sel?' picked':''}"><h3>${esc(o.assureur)}${i===ri?' ✓':''}</h3><div class="f">${esc(o.formule)}</div><div class="cot">${esc(o.cotisation)}</div>`
+    +`<label class="pick"><input type="radio" name="pickoffer" ${i===sel?'checked':''} onchange="pickOffer(${i})"> Choisir pour la fiche DDA</label></th>`).join("")+'</tr>';
+  let rows="",lastMod=null;
+  (d.garanties||[]).forEach(g=>{
+    const mod=g.module||"Garanties";
+    if(mod!==lastMod){lastMod=mod;rows+=`<tr class="modrow"><td class="modh" colspan="${nOff+1}">${esc(mod)}</td></tr>`;}
+    rows+=`<tr><td class="poste">${esc(g.poste)}</td>`+(g.valeurs||[]).map((v,i)=>`<td class="${i===ri?'reco':''}${i===sel?' picked':''}">${esc(v)}</td>`).join("")+`</tr>`;
+  });
+  rows+=`<tr class="modrow"><td class="modh" colspan="${nOff+1}">Tarif</td></tr>`;
+  rows+=`<tr><td class="poste">Frais d’adhésion</td>`+(d.offres||[]).map((o,i)=>`<td class="${i===ri?'reco':''}${i===sel?' picked':''}">${esc(o.frais_adhesion||'—')}</td>`).join("")+`</tr>`;
+  rows+=`<tr class="tarif"><td class="poste">Cotisation mensuelle</td>`+(d.offres||[]).map((o,i)=>`<td class="${i===ri?'reco':''}${i===sel?' picked':''}"><b>${esc(o.cotisation||'')}</b></td>`).join("")+`</tr>`;
+  let reco=d.recommandation&&d.recommandation.offre?`<div class="recobox">⭐ <b>Recommandation : ${esc(d.recommandation.offre)}</b><br>${esc(d.recommandation.pourquoi)}</div>`:"";
+  let warn=(d.warnings||[]).length?`<div class="warn">⚠️ ${d.warnings.map(esc).join("<br>⚠️ ")}</div>`:"";
+  $("#result").innerHTML=`
+    <div style="overflow-x:auto"><table id="cmptable"><thead>${head}</thead><tbody>${rows}</tbody></table></div>
+    <div class="row" style="margin-top:10px">
+      <button onclick="exportTableXlsx()" id="btnXlsx">📊 Télécharger en Excel</button>
+      <button onclick="printTableOnly()">🖨️ Télécharger en PDF</button>
+    </div>
+    ${reco}${warn}
+    <div class="synthbox"><h2><span>✉️ Synthèse client (modifiable)</span></h2>
+      <textarea id="synth">${esc(d.synthese_client)}</textarea>
+      <div class="synthprint" id="synthprint"></div></div>
+    <div class="actions">
+      <button class="copy" onclick="copySynth()">📋 Copier la synthèse</button>
+      <button onclick="ddaFromCompare()">📝 Fiche DDA</button>
+      <button onclick="window.print()">🖨️ Imprimer / PDF</button>
+    </div>`;
+  $("#result").classList.remove("hidden");
+  sessionStorage.setItem("cmp_result",JSON.stringify(d));               // garde le résultat en mémoire entre onglets
+  const ta=$("#synth");if(ta)ta.addEventListener("input",()=>{d.synthese_client=ta.value;sessionStorage.setItem("cmp_result",JSON.stringify(d));});
+  if(!window._restoring&&!keepScroll)$("#result").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function pickOffer(i){
+  const d=window._cmp;if(!d)return;
+  d._selectedIdx=i;
+  render(d,true);
+}
+
+// --- Sessions enregistrées : permet de garder plusieurs comparaisons en cours
+// (une par client) et de les retrouver plus tard, séparément du sessionStorage
+// (qui lui ne garde que le tout dernier résultat, entre onglets).
+let _sessId=null;
+async function sessList(){
+  const r=await fetch("/sessions/comparateur");const d=await r.json();
+  const items=d.sessions||[];
+  $("#sessList").innerHTML=items.length
+    ?items.map(s=>`<div class="sessitem"><b data-id="${s.id}">${esc(s.nom)}</b><span class="d">${new Date(s.updated_at*1000).toLocaleString("fr-FR")}</span><span class="del" data-id="${s.id}" title="supprimer">🗑️</span></div>`).join("")
+    :`<div style="color:var(--mut)">Aucune session enregistrée pour l'instant.</div>`;
+  $("#sessList").querySelectorAll("b[data-id]").forEach(b=>b.onclick=()=>sessLoad(b.dataset.id));
+  $("#sessList").querySelectorAll(".del[data-id]").forEach(b=>b.onclick=async(ev)=>{
+    ev.stopPropagation();
+    if(!confirm("Supprimer cette session enregistrée ?"))return;
+    await fetch(`/sessions/comparateur/${b.dataset.id}/supprimer`,{method:"POST"});
+    if(_sessId===b.dataset.id)_sessId=null;
+    sessList();
+  });
+}
+async function sessSave(){
+  const nom=($("#sessNom").value||"").trim();
+  if(!nom){alert("⚠️ Donne un nom à la session avant d'enregistrer.");return;}
+  if(!window._cmp){alert("⚠️ Compare d'abord des devis avant d'enregistrer.");return;}
+  const btn=$("#sessSave");const orig=btn.textContent;btn.disabled=true;btn.textContent="⏳";
+  try{
+    const r=await fetch("/sessions/comparateur",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:_sessId,nom,data:window._cmp})});
+    const d=await r.json();_sessId=d.id;
+    await sessList();
+    btn.textContent="✓ Enregistré";setTimeout(()=>btn.textContent=orig,1500);
+  }finally{btn.disabled=false;}
+}
+async function sessLoad(id){
+  const r=await fetch(`/sessions/comparateur/${id}`);if(!r.ok)return;
+  const it=await r.json();
+  _sessId=it.id;$("#sessNom").value=it.nom;
+  render(it.data);
+}
+function sessNew(){
+  _sessId=null;$("#sessNom").value="";
+  window._cmp=null;picked=[];renderFiles();
+  $("#result").classList.add("hidden");$("#result").innerHTML="";
+  sessionStorage.removeItem("cmp_result");
+}
+$("#sessSave").onclick=sessSave;
+$("#sessNew").onclick=sessNew;
+sessList();
+function copySynth(){navigator.clipboard.writeText($("#synth").value).then(()=>{const b=event.target;b.textContent="✓ Copié";setTimeout(()=>b.textContent="📋 Copier la synthèse",1500);});}
+
+async function exportTableXlsx(){
+  const btn=$("#btnXlsx");const orig=btn.textContent;btn.disabled=true;btn.textContent="⏳ Génération…";
+  try{
+    const r=await fetch("/comparateur/export-xlsx",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(window._cmp||{})});
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||"Erreur export Excel");}
+    const b=await r.blob();
+    const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="comparatif_mutuelle.xlsx";a.click();URL.revokeObjectURL(a.href);
+  }catch(e){alert("⚠️ "+e.message);}
+  finally{btn.disabled=false;btn.textContent=orig;}
+}
+function printTableOnly(){
+  const table=$("#cmptable");
+  if(!table){alert("Aucun tableau à imprimer.");return;}
+  const w=window.open("","_blank");
+  if(!w){alert("⚠️ Le navigateur a bloqué l'ouverture de la fenêtre d'impression.");return;}
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Comparatif mutuelle</title>
+    <style>
+      body{font-family:'Segoe UI',system-ui,sans-serif;padding:20px;color:#43392f}
+      table{border-collapse:collapse;width:100%;font-size:12px}
+      th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;vertical-align:top}
+      thead th{background:#fbeadf}
+      .modh{background:#fbeadf;color:#8a3f27;font-weight:700;text-transform:uppercase;font-size:11px}
+      .cot{font-weight:700;color:#e07856}
+      .pick{display:none}
+    </style></head><body>${table.outerHTML}</body></html>`);
+  w.document.close();
+  w.onafterprint=()=>w.close();
+  setTimeout(()=>{w.focus();w.print();},300);
+}
+function ddaFromCompare(){
+  const d=window._cmp||{};const ri=recoIndex(d);
+  const nOff=(d.offres||[]).length;
+  const idx=(d._selectedIdx!==undefined&&d._selectedIdx!==null&&d._selectedIdx<nOff)?d._selectedIdx:(ri>=0?ri:0);
+  const o=(d.offres||[])[idx]||{};
+  const ecartes=(d.offres||[]).filter((_,i)=>i!==idx).map(x=>`${x.assureur||""} ${x.formule||""} (${x.cotisation||""})`).join(" ; ");
+  sessionStorage.setItem("dda_prefill",JSON.stringify({assureur:o.assureur||"",formule:o.formule||"",cotisation:o.cotisation||"",ecartes,besoins:""}));
+  location.href="/fiche-dda";
+}
+window.addEventListener("beforeprint",()=>{const t=$("#synth"),p=$("#synthprint");if(t&&p)p.textContent=t.value;});
+(function(){try{const s=sessionStorage.getItem("cmp_result");if(s){window._restoring=true;render(JSON.parse(s));window._restoring=false;}}catch(e){}})();  // restaure au retour sur l'onglet
+</script>
+</body>
+</html>

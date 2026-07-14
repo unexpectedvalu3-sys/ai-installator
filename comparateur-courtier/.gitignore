@@ -1,0 +1,18 @@
+.env
+data/
+_test_data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.log
+# artifacts de build
+build/
+dist/
+*.spec
+static/mascotte.ico
+comparateur.log
+comparateur_erreur.log
+# secrets embarqués (clés API + identifiants) — JAMAIS commités
+keys.txt
+embedded_config.py

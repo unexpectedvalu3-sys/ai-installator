@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche DDA — devoir de conseil</title>
+<style>
+  :root{--bg:#fdf6f2;--card:#fff;--ink:#43392f;--mut:#948a80;--line:#efe4dc;--indigo:#e07856;--violet:#e89478;--teal:#4f9e92;--r:12px}
+  *{box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:24px 16px;line-height:1.5}
+  .wrap{max-width:840px;margin:0 auto}
+  .tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+  .tabs a{padding:9px 14px;font-size:14px;font-weight:600;color:var(--mut);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabs a:hover{color:var(--ink)} .tabs a.on{color:#8a3f27;border-bottom-color:var(--indigo)}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .logo{width:42px;height:42px;border-radius:13px;background:#fae4d8;display:flex;align-items:center;justify-content:center;font-size:22px}
+  h1{font-size:21px;font-weight:600;margin:0}
+  .sub{color:var(--mut);font-size:13px;margin:2px 0 14px}
+  .sessbox{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px 15px;margin-bottom:16px}
+  .sessbox .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0}
+  .sessbox input{flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13.5px}
+  .sesslist{margin-top:8px;font-size:13px}
+  .sessitem{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .sessitem:last-child{border-bottom:0}
+  .sessitem b{flex:1;cursor:pointer;font-weight:600}
+  .sessitem b:hover{color:var(--indigo)}
+  .sessitem .d{color:var(--mut);font-size:11px}
+  .sessitem .del{color:#a33f52;cursor:pointer;font-size:13px}
+  .picker{display:flex;gap:8px;margin:0 0 16px}
+  .picker button{flex:1;font:inherit;font-size:14px;font-weight:600;cursor:pointer;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--mut)}
+  .picker button.on{background:#fbeadf;border-color:var(--indigo);color:#8a3f27}
+  .doc{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;box-shadow:0 1px 3px rgba(60,40,30,.06)}
+  .doctitle{text-align:center;font-size:17px;font-weight:700;margin:0 0 3px}
+  .docsub{text-align:center;font-size:11.5px;color:var(--mut);margin:0 0 16px}
+  .intro{font-size:12.5px;color:#5f564d;margin:0 0 14px}
+  .intro ul{margin:6px 0 0;padding-left:18px} .intro li{margin:2px 0}
+  h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--indigo);margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid #f6e7df}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 16px}
+  .f{display:flex;flex-direction:column;gap:2px;margin:4px 0}.f.full{grid-column:1/-1}
+  label{font-size:11px;color:var(--mut);font-weight:600}
+  .val{font-size:13.5px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;min-height:24px;background:#fffdfb;outline:none}
+  .val:focus{border-color:var(--indigo);box-shadow:0 0 0 2px #fbe6dc}
+  .val.ml{min-height:46px;white-space:pre-wrap}
+  table.bt{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}
+  table.bt th,table.bt td{border:1px solid var(--line);padding:5px 7px;text-align:left}
+  table.bt th{background:#fbeadf;color:#8a3f27;font-weight:600;font-size:11px}
+  table.bt td[contenteditable]{background:#fffdfb;outline:none}
+  .opts{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;margin:4px 0}
+  .opts label{font-size:13px;color:var(--ink);font-weight:400;display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+  .rate{display:flex;align-items:center;gap:10px;margin:5px 0}
+  .rate .rl{width:120px;font-size:13px}
+  .rate .dots{display:flex;gap:6px}
+  .rate .dots span{width:22px;height:22px;border:1px solid #e0b7a6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#b08b7a;cursor:pointer;user-select:none}
+  .rate .dots span.sel{background:var(--indigo);border-color:var(--indigo);color:#fff;font-weight:600}
+  .legal{font-size:11.5px;color:#6b6058;margin:8px 0}
+  button.act{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:#fff;padding:9px 14px;font-weight:600}
+  .act.ai{background:var(--indigo);color:#fff;border:none}
+  .act.print{background:var(--ink);color:#fff;border:none}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .spin{font-size:13px;color:var(--mut);margin-top:8px;display:inline-flex;align-items:center;gap:8px}
+  .ibar{display:inline-block;width:130px;height:5px;background:#f6e7df;border-radius:99px;overflow:hidden}
+  .ibar>i{display:block;height:100%;width:40%;background:var(--indigo);border-radius:99px;animation:ind 1.1s ease-in-out infinite}
+  @keyframes ind{0%{margin-left:-42%}100%{margin-left:102%}}
+  .err{background:#fbe7ec;color:#a33f52;border-radius:8px;padding:8px 10px;font-size:13px;margin-top:8px}
+  .foot{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:18px;font-size:12px}
+  .stamp{border:1px dashed #e0b7a6;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#5f564d;line-height:1.45}
+  .stamp b{color:#8a3f27}
+  .sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:16px}.sign div{font-size:12px;color:var(--mut)}
+  .cabinfo{font-size:10.5px;color:var(--mut);margin-top:14px;line-height:1.5}
+  .hidden{display:none}
+  @media print{
+    body{background:#fff;padding:0} .noprint{display:none !important}
+    .doc{border:none;box-shadow:none;border-radius:0;padding:0}
+    .val{border:none;background:transparent;padding:2px 0;min-height:0}
+    table.bt th{background:#f2f2f2 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rate .dots span.sel{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    h2{break-after:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head noprint"><div class="logo">📝</div><div><h1>Fiche DDA — devoir de conseil</h1></div></div>
+  <div class="tabs noprint">
+    <a href="/">Accueil</a>
+    <a href="/comparateur">⚖️ Comparateur</a>
+    <a href="/fiche-dda" class="on">📝 Fiche DDA</a>
+    <a href="/logout" style="margin-left:auto">Déconnexion</a>
+  </div>
+  <div class="sessbox noprint">
+    <div class="row">
+      <input id="sessNom" placeholder="Nom du brouillon (ex : DUPONT — santé)">
+      <button id="sessSave">💾 Enregistrer</button>
+      <button id="sessNew">🆕 Nouveau brouillon</button>
+    </div>
+    <div class="sesslist" id="sessList"></div>
+  </div>
+
+  <div class="picker noprint">
+    <button data-t="sante" class="on">🩺 Santé / Prévoyance — Sophie SEVERIN</button>
+    <button data-t="iard">🚗 Auto / Moto / Habitation — Erika LEMARIE</button>
+  </div>
+
+  <!-- ================= MODÈLE SANTÉ (Sophie) ================= -->
+  <div class="doc" id="doc_sante">
+    <p class="doctitle">FORMALISATION DU DEVOIR DE CONSEIL</p>
+    <p class="docsub">Article L520-1 et R520-2 du Code des assurances</p>
+    <div class="intro">Le présent document retrace nos échanges et notre dialogue. Cette démarche nous a permis, ensemble, de :
+      <ul><li>Préciser votre situation personnelle et familiale.</li>
+      <li>Définir vos souhaits et objectifs en matière d'assurance santé et/ou prévoyance.</li>
+      <li>Mettre en évidence l'adéquation de notre offre à votre situation, sous réserve, le cas échéant, de l'acceptation technique et médicale de l'assureur concerné.</li></ul></div>
+
+    <h2>Situation personnelle et familiale</h2>
+    <div class="grid3">
+      <div class="f"><label>Civilité</label><div class="val" id="s_civilite" contenteditable></div></div>
+      <div class="f"><label>Nom</label><div class="val" id="s_nom" contenteditable></div></div>
+      <div class="f"><label>Prénom</label><div class="val" id="s_prenom" contenteditable></div></div>
+      <div class="f"><label>Date de naissance</label><div class="val" id="s_naissance" contenteditable></div></div>
+      <div class="f"><label>Téléphone</label><div class="val" id="s_tel" contenteditable></div></div>
+      <div class="f"><label>Mail</label><div class="val" id="s_mail" contenteditable></div></div>
+      <div class="f full"><label>Adresse</label><div class="val" id="s_adresse" contenteditable></div></div>
+      <div class="f"><label>Profession</label><div class="val" id="s_profession" contenteditable></div></div>
+    </div>
+
+    <h2>Bénéficiaires</h2>
+    <table class="bt"><thead><tr><th>Qualité</th><th>Nom</th><th>Prénom</th><th>Date de naissance</th><th>Régime</th></tr></thead>
+      <tbody>
+        <tr><td contenteditable id="s_b1q"></td><td contenteditable id="s_b1n"></td><td contenteditable id="s_b1p"></td><td contenteditable id="s_b1d"></td><td contenteditable id="s_b1r"></td></tr>
+        <tr><td contenteditable id="s_b2q"></td><td contenteditable id="s_b2n"></td><td contenteditable id="s_b2p"></td><td contenteditable id="s_b2d"></td><td contenteditable id="s_b2r"></td></tr>
+        <tr><td contenteditable id="s_b3q"></td><td contenteditable id="s_b3n"></td><td contenteditable id="s_b3p"></td><td contenteditable id="s_b3d"></td><td contenteditable id="s_b3r"></td></tr>
+      </tbody></table>
+
+    <h2>Votre objectif</h2>
+    <div class="opts">Souscrire à un régime :
+      <label><input type="checkbox" id="s_obj_sante"> D'assurance santé individuelle et collective</label>
+      <label><input type="checkbox" id="s_obj_prev"> De prévoyance</label>
+    </div>
+
+    <h2>Vos besoins en santé</h2>
+    <p style="font-size:12px;color:var(--mut);margin:0 0 6px">Quels sont vos besoins sur les 5 postes ci-dessous ? (1 : besoin le plus faible ; 5 : besoin le plus fort)</p>
+    <div class="rate" data-rate="s_rate_hospit"><div class="rl">Hospitalisation</div><div class="dots"></div></div>
+    <div class="rate" data-rate="s_rate_conso"><div class="rl">Consultation</div><div class="dots"></div></div>
+    <div class="rate" data-rate="s_rate_dentaire"><div class="rl">Dentaire</div><div class="dots"></div></div>
+    <div class="rate" data-rate="s_rate_optique"><div class="rl">Optique</div><div class="dots"></div></div>
+    <div class="rate" data-rate="s_rate_medecine"><div class="rl">Médecine douce</div><div class="dots"></div></div>
+    <div class="opts" style="margin-top:8px">Honoraires médicaux :
+      <label><input type="checkbox" id="s_hono_tm"> À hauteur du ticket modérateur</label>
+      <label><input type="checkbox" id="s_hono_dep"> Avec prise en charge des dépassements d'honoraires</label>
+    </div>
+    <div class="opts">Hospitalisation :
+      <label><input type="checkbox" id="s_hospit_chambre"> Chambre particulière</label>
+    </div>
+    <div class="opts">Besoins en optique ?
+      <label><input type="checkbox" id="s_opt_simple"> Verres simples</label>
+      <label><input type="checkbox" id="s_opt_complexe"> Verres complexes</label>
+      <label><input type="checkbox" id="s_opt_lentilles"> Lentilles</label>
+    </div>
+    <div class="opts">Besoins particuliers en dentaire ?
+      <label><input type="checkbox" id="s_dent_prothese"> Prothèse</label>
+      <label><input type="checkbox" id="s_dent_soins"> Soins</label>
+      <label><input type="checkbox" id="s_dent_implant"> Implant</label>
+      <label><input type="checkbox" id="s_dent_paro"> Parodontologie</label>
+      <label><input type="checkbox" id="s_dent_ortho"> Orthodontie</label>
+    </div>
+    <div class="f" style="margin-top:8px;max-width:220px"><label>Tarif</label><div class="val" id="s_tarif" contenteditable></div></div>
+    <div class="grid" style="margin-top:8px">
+      <div class="f"><label>Date d'effet de la garantie souhaitée</label><div class="val" id="s_date_effet" contenteditable></div></div>
+      <div class="f"><label>Précisions / demandes spécifiques</label><div class="val" id="s_precisions" contenteditable></div></div>
+    </div>
+
+    <h2>Vos besoins en prévoyance</h2>
+    <div class="opts">
+      <label><input type="checkbox" id="s_prev_at"> Arrêt de travail</label><div class="val" id="s_prev_at_m" contenteditable style="min-width:90px">€</div>
+      <label><input type="checkbox" id="s_prev_deces"> Décès</label><div class="val" id="s_prev_deces_m" contenteditable style="min-width:90px">€</div>
+    </div>
+
+    <h2>Votre solution</h2>
+    <p class="legal">Vous reconnaissez avoir reçu un exemplaire du présent document et l'ensemble des informations relevant de l'article L520-1 et R520-2 du Code des assurances. Au vu des besoins exprimés au terme du présent « diagnostic », nous vous recommandons de souscrire la garantie :</p>
+    <div class="grid">
+      <div class="f"><label>Garantie recommandée</label><div class="val" id="s_reco_garantie" contenteditable></div></div>
+      <div class="f"><label>Proposée par</label><div class="val" id="s_reco_par" contenteditable>Réunion 2 Assurances — réseau 360 Courtage</div></div>
+      <div class="f full"><label>Justification du conseil</label><div class="val ml" id="s_justif" style="min-height:80px" contenteditable></div></div>
+    </div>
+    <div class="row noprint"><button class="act ai" data-ai="sante">✨ Rédiger le conseil (IA)</button><span class="spin hidden" id="s_spin">Rédaction en cours… <span class="ibar"><i></i></span></span></div>
+    <div class="err hidden noprint" id="s_err"></div>
+    <p class="legal">Nous attirons votre attention sur l'importance de la sincérité des réponses apportées aux questions de l'assureur. Toute fausse déclaration peut vous exposer à une annulation de votre contrat et à l'absence de couverture en cas de sinistre. Vous reconnaissez avoir pris connaissance du présent document préalablement à l'adhésion, et avoir reçu une information sur l'étendue, la définition des risques et des garanties proposées.</p>
+
+    <div class="foot">
+      <div><div class="f"><label>Fait à</label><div class="val" id="s_lieu" contenteditable>Peyrehorade</div></div>
+        <div class="sign"><div>Le souscripteur</div><div></div></div></div>
+      <div><div class="f"><label>Le</label><div class="val" id="s_date" contenteditable></div></div>
+        <div class="stamp"><b>Réunion 2 Assurances</b> — membre du réseau 360 Courtage<br>
+          Conseillère : <b>Sophie SEVERIN</b> · s.severin@360courtage.fr<br>
+          58 Rue de Lembarry, 40300 Peyrehorade · 07 67 22 41 43<br>
+          N° ORIAS : 18 007 598 · RCS DAX : 843 135 401</div></div>
+    </div>
+    <p class="cabinfo">Informations sur notre cabinet : nous sommes intermédiaires d'assurances, enregistrés auprès de l'ORIAS n° 18007598 (vérifiable sur www.orias.fr). Pour toute réclamation, contactez-nous ; Autorité de Contrôle : ACPR — 61 Rue Taitbout, 75436 Paris Cedex 9.</p>
+  </div>
+
+  <!-- ================= MODÈLE AUTO/MOTO/HABITATION (Erika) ================= -->
+  <div class="doc hidden" id="doc_iard">
+    <p class="doctitle">FICHE D'INFORMATION ET DE CONSEIL</p>
+    <p class="docsub">Article L520-1 et R520-2 du Code des assurances</p>
+    <div class="intro">Le présent document retrace nos échanges et notre dialogue. Cette démarche nous a permis, ensemble, de :
+      <ul><li>Préciser votre situation personnelle et familiale.</li>
+      <li>Définir vos souhaits et objectifs en matière d'assurance Auto et/ou Moto et/ou Habitation.</li>
+      <li>Mettre en évidence l'adéquation de notre offre à votre situation, sous réserve, le cas échéant, de l'acceptation technique de l'assureur concerné.</li></ul></div>
+
+    <div class="opts">Le devis a été réalisé :
+      <label><input type="checkbox" id="i_dev_dom"> À domicile</label>
+      <label><input type="checkbox" id="i_dev_dist"> À distance</label>
+      <label><input type="checkbox" id="i_dev_cab"> Au cabinet du courtier</label>
+      <label><input type="checkbox" id="i_dev_autre"> Autre</label>
+    </div>
+    <div class="opts">Le contrat s'est conclu dans le cadre de :
+      <label><input type="checkbox" id="i_con_dom"> Vente à domicile</label>
+      <label><input type="checkbox" id="i_con_dist"> Vente à distance</label>
+      <label><input type="checkbox" id="i_con_cab"> Au cabinet du courtier</label>
+      <label><input type="checkbox" id="i_con_autre"> Autre</label>
+    </div>
+
+    <h2>Coordonnées</h2>
+    <div class="grid3">
+      <div class="f"><label>Civilité</label><div class="val" id="i_civilite" contenteditable></div></div>
+      <div class="f"><label>Nom</label><div class="val" id="i_nom" contenteditable></div></div>
+      <div class="f"><label>Prénom</label><div class="val" id="i_prenom" contenteditable></div></div>
+      <div class="f"><label>Date de naissance</label><div class="val" id="i_naissance" contenteditable></div></div>
+      <div class="f"><label>Téléphone</label><div class="val" id="i_tel" contenteditable></div></div>
+      <div class="f"><label>Mail</label><div class="val" id="i_mail" contenteditable></div></div>
+      <div class="f full"><label>Adresse</label><div class="val" id="i_adresse" contenteditable></div></div>
+      <div class="f"><label>Profession</label><div class="val" id="i_profession" contenteditable></div></div>
+    </div>
+
+    <h2>Votre objectif</h2>
+    <div class="opts">Souscrire un contrat :
+      <label><input type="checkbox" id="i_obj_auto"> Automobile</label>
+      <label><input type="checkbox" id="i_obj_moto"> Moto</label>
+      <label><input type="checkbox" id="i_obj_habitation"> Habitation</label>
+    </div>
+    <div class="f full"><label>Vos besoins</label><div class="val ml" id="i_besoins" contenteditable></div></div>
+
+    <h2>Antécédents</h2>
+    <div class="opts">
+      <label><input type="checkbox" id="i_ant_premiere"> Première assurance</label>
+      <label><input type="checkbox" id="i_ant_malus"> Malus</label>
+      <label><input type="checkbox" id="i_ant_bonus"> Bonus</label>
+      <label><input type="checkbox" id="i_ant_resilie"> Résilié Compagnie</label>
+      <label><input type="checkbox" id="i_ant_change"> Changement Compagnie</label>
+    </div>
+    <div class="grid">
+      <div class="f"><label>Coefficient bonus/malus (CRM)</label><div class="val" id="i_crm" contenteditable></div></div>
+      <div class="f"><label>Ancienneté / précisions</label><div class="val" id="i_ant_prec" contenteditable></div></div>
+    </div>
+
+    <h2>Le risque assuré</h2>
+    <div class="grid3">
+      <div class="f"><label>Véhicule — Marque</label><div class="val" id="i_marque" contenteditable></div></div>
+      <div class="f"><label>Modèle</label><div class="val" id="i_modele" contenteditable></div></div>
+      <div class="f"><label>1ère mise en circulation</label><div class="val" id="i_mec" contenteditable></div></div>
+    </div>
+    <div class="opts" style="margin-top:6px">Garanties souhaitées :
+      <label><input type="checkbox" id="i_g_tiers"> Formule Tiers</label>
+      <label><input type="checkbox" id="i_g_tiers_etendue"> Formule Tiers étendue</label>
+      <label><input type="checkbox" id="i_g_tous_risques"> Formule tous risques</label>
+    </div>
+    <div class="grid">
+      <div class="f"><label>Options (conducteur, franchise…)</label><div class="val" id="i_options" contenteditable></div></div>
+      <div class="f"><label>Date d'effet souhaitée (Loi Hamon ?)</label><div class="val" id="i_date_effet" contenteditable></div></div>
+    </div>
+    <p class="legal">Vos engagements : vous nous déclarez avoir pris connaissance des Conditions Particulières et des Conditions Générales de la Compagnie, et que le risque assuré répond aux exigences de celle-ci.</p>
+
+    <h2>Votre solution</h2>
+    <p class="legal">Vous reconnaissez avoir reçu un exemplaire du présent document et l'ensemble des informations relevant de l'article L520-1 et R520-2 du Code des assurances. Au vu des besoins exprimés au terme du présent « diagnostic », nous vous recommandons de souscrire à la garantie :</p>
+    <div class="grid">
+      <div class="f"><label>Garantie recommandée</label><div class="val" id="i_reco_garantie" contenteditable></div></div>
+      <div class="f"><label>Proposé par (compagnie)</label><div class="val" id="i_reco_par" contenteditable></div></div>
+      <div class="f full"><label>Justification du conseil</label><div class="val ml" id="i_justif" style="min-height:80px" contenteditable></div></div>
+    </div>
+    <div class="row noprint"><button class="act ai" data-ai="iard">✨ Rédiger le conseil (IA)</button><span class="spin hidden" id="i_spin">Rédaction en cours… <span class="ibar"><i></i></span></span></div>
+    <div class="err hidden noprint" id="i_err"></div>
+    <p class="legal">Nous attirons votre attention sur l'importance de la sincérité des réponses apportées aux questions de l'assureur et/ou du courtier. Toute fausse déclaration peut vous exposer à une annulation de votre contrat et à l'absence de couverture en cas de sinistre. Vous reconnaissez avoir pris connaissance du présent document préalablement à l'adhésion, et avoir reçu une information sur l'étendue, la définition des risques et des garanties proposées.</p>
+
+    <div class="foot">
+      <div><div class="f"><label>Fait à</label><div class="val" id="i_lieu" contenteditable>Peyrehorade</div></div>
+        <div class="sign"><div>Le souscripteur</div><div></div></div></div>
+      <div><div class="f"><label>Le</label><div class="val" id="i_date" contenteditable></div></div>
+        <div class="stamp"><b>Réunion 2 Assurances</b> — membre du réseau 360 Courtage<br>
+          Conseillère : <b>Erika LEMARIE</b> · e.lemarie@360courtage.fr<br>
+          58 Rue de Lembarry, 40300 Peyrehorade · 07 67 22 41 43<br>
+          N° ORIAS : 18 007 598 · RCS DAX : 843 135 401</div></div>
+    </div>
+    <p class="cabinfo">Information sur notre cabinet : nous sommes intermédiaires d'assurances, enregistré auprès de l'ORIAS n° 18007598 (vérifiable sur www.orias.fr). Pour toute réclamation, n'hésitez pas à nous contacter ; Autorité de Contrôle des Assurances et Mutuelles : ACPR — 61 Rue Taitbout, 75436 Paris Cedex 9.</p>
+  </div>
+
+  <div class="row noprint" style="margin-top:16px"><button class="act print" onclick="window.print()" style="flex:1">🖨️ Imprimer / Exporter en PDF</button></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const get=id=>($(id)?$(id).innerText.trim():"");
+const set=(id,v)=>{if($(id))$(id).textContent=v||"";};
+let TPL="sante";
+
+// construit les pastilles de notation 1..5
+document.querySelectorAll(".rate").forEach(r=>{
+  const dots=r.querySelector(".dots"),key=r.dataset.rate;
+  for(let n=1;n<=5;n++){const s=document.createElement("span");s.textContent=n;s.dataset.n=n;
+    s.onclick=()=>{dots.querySelectorAll("span").forEach(x=>x.classList.remove("sel"));s.classList.add("sel");r.dataset.val=n;saveForm();};
+    dots.appendChild(s);}
+});
+function setRate(key,val){const r=document.querySelector(`.rate[data-rate="${key}"]`);if(!r)return;r.dataset.val=val||"";
+  r.querySelectorAll(".dots span").forEach(s=>s.classList.toggle("sel",String(s.dataset.n)===String(val)));}
+
+// --- sélecteur de modèle ---
+document.querySelectorAll(".picker button").forEach(b=>b.onclick=()=>{
+  TPL=b.dataset.t;
+  document.querySelectorAll(".picker button").forEach(x=>x.classList.toggle("on",x===b));
+  $("doc_sante").classList.toggle("hidden",TPL!=="sante");
+  $("doc_iard").classList.toggle("hidden",TPL!=="iard");
+  sessionStorage.setItem("dda_tpl",TPL);
+});
+
+// --- persistance (champs texte + cases + notations), par session ---
+const FIELDS=[...document.querySelectorAll('.val[id],td[contenteditable][id]')].map(e=>e.id);
+const CHECKS=[...document.querySelectorAll('input[type=checkbox][id]')].map(e=>e.id);
+const RATES=[...document.querySelectorAll('.rate')].map(r=>r.dataset.rate);
+function formSnapshot(){
+  const o={f:{},c:{},r:{}};
+  FIELDS.forEach(id=>o.f[id]=get(id));
+  CHECKS.forEach(id=>o.c[id]=$(id).checked);
+  RATES.forEach(k=>o.r[k]=document.querySelector(`.rate[data-rate="${k}"]`).dataset.val||"");
+  return o;
+}
+function saveForm(){sessionStorage.setItem("dda_form2",JSON.stringify(formSnapshot()));}
+function restoreForm(o){try{
+  if(!o)o=JSON.parse(sessionStorage.getItem("dda_form2")||"null");
+  if(!o)return;
+  if(o.f)Object.keys(o.f).forEach(id=>{set(id,o.f[id]||"");});
+  if(o.c)Object.keys(o.c).forEach(id=>{if($(id))$(id).checked=!!o.c[id];});
+  if(o.r)Object.keys(o.r).forEach(k=>setRate(k,o.r[k]));
+}catch(e){}}
+document.querySelectorAll('.val[id],td[contenteditable][id]').forEach(e=>e.addEventListener("input",saveForm));
+document.querySelectorAll('input[type=checkbox][id]').forEach(e=>e.addEventListener("change",saveForm));
+
+// --- Brouillons enregistrés : plusieurs fiches en cours en parallèle,
+// retrouvables dans une liste (séparé du sessionStorage qui ne garde que la
+// toute dernière fiche ouverte, entre onglets).
+function esc(s){return (s||"").toString().replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+let _sessId=null;
+async function sessList(){
+  const r=await fetch("/sessions/fiche_dda");const d=await r.json();
+  const items=d.sessions||[];
+  $("sessList").innerHTML=items.length
+    ?items.map(s=>`<div class="sessitem"><b data-id="${s.id}">${esc(s.nom)}</b><span class="d">${new Date(s.updated_at*1000).toLocaleString("fr-FR")}</span><span class="del" data-id="${s.id}" title="supprimer">🗑️</span></div>`).join("")
+    :`<div style="color:var(--mut)">Aucun brouillon enregistré pour l'instant.</div>`;
+  document.querySelectorAll("#sessList b[data-id]").forEach(b=>b.onclick=()=>sessLoad(b.dataset.id));
+  document.querySelectorAll("#sessList .del[data-id]").forEach(b=>b.onclick=async(ev)=>{
+    ev.stopPropagation();
+    if(!confirm("Supprimer ce brouillon enregistré ?"))return;
+    await fetch(`/sessions/fiche_dda/${b.dataset.id}/supprimer`,{method:"POST"});
+    if(_sessId===b.dataset.id)_sessId=null;
+    sessList();
+  });
+}
+async function sessSave(){
+  const nom=($("sessNom").value||"").trim();
+  if(!nom){alert("⚠️ Donne un nom au brouillon avant d'enregistrer.");return;}
+  const btn=$("sessSave");const orig=btn.textContent;btn.disabled=true;btn.textContent="⏳";
+  try{
+    const r=await fetch("/sessions/fiche_dda",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:_sessId,nom,data:{tpl:TPL,form:formSnapshot()}})});
+    const d=await r.json();_sessId=d.id;
+    await sessList();
+    btn.textContent="✓ Enregistré";setTimeout(()=>btn.textContent=orig,1500);
+  }finally{btn.disabled=false;}
+}
+async function sessLoad(id){
+  const r=await fetch(`/sessions/fiche_dda/${id}`);if(!r.ok)return;
+  const it=await r.json();
+  _sessId=it.id;$("sessNom").value=it.nom;
+  const t=(it.data||{}).tpl||"sante";
+  const b=document.querySelector(`.picker button[data-t="${t}"]`);if(b)b.click();
+  restoreForm((it.data||{}).form||null);
+  saveForm();
+}
+function sessNew(){
+  _sessId=null;$("sessNom").value="";
+  FIELDS.forEach(id=>set(id,""));
+  CHECKS.forEach(id=>{if($(id))$(id).checked=false;});
+  RATES.forEach(k=>setRate(k,""));
+  sessionStorage.removeItem("dda_form2");
+  saveForm();
+}
+$("sessSave").onclick=sessSave;
+$("sessNew").onclick=sessNew;
+
+// --- IA : rédige la justification du conseil ---
+document.querySelectorAll("button[data-ai]").forEach(btn=>btn.onclick=async()=>{
+  const t=btn.dataset.ai,P=t==="sante"?"s_":"i_";
+  $(P+"err").classList.add("hidden");$(P+"spin").classList.remove("hidden");btn.disabled=true;
+  let besoins,reco,ecartes="";
+  if(t==="sante"){
+    const notes=["hospit","conso","dentaire","optique","medecine"].map(k=>{const v=(document.querySelector(`.rate[data-rate="s_rate_${k}"]`)||{}).dataset;return v&&v.val?`${k}:${v.val}/5`:"";}).filter(Boolean).join(", ");
+    const ck=(id,lbl)=>$(id)&&$(id).checked?lbl:"";
+    const optique=[ck("s_opt_simple","verres simples"),ck("s_opt_complexe","verres complexes"),ck("s_opt_lentilles","lentilles")].filter(Boolean).join("/");
+    const dentaire=[ck("s_dent_prothese","prothèse"),ck("s_dent_soins","soins"),ck("s_dent_implant","implant"),ck("s_dent_paro","parodontologie"),ck("s_dent_ortho","orthodontie")].filter(Boolean).join("/");
+    besoins=[get("s_precisions"),notes&&("Priorités "+notes),ck("s_hono_dep","dépassements d'honoraires"),ck("s_hospit_chambre","chambre particulière"),optique&&("optique : "+optique),dentaire&&("dentaire : "+dentaire)].filter(Boolean).join(" · ");
+    reco=[get("s_reco_garantie"),get("s_reco_par")].filter(Boolean).join(" — ");
+  }else{
+    const form=[$("i_g_tous_risques").checked?"Tous risques":"",$("i_g_tiers_etendue").checked?"Tiers étendue":"",$("i_g_tiers").checked?"Tiers":""].filter(Boolean).join("/");
+    besoins=[get("i_besoins"),form&&("Formule "+form),get("i_marque")&&("Véhicule "+get("i_marque")+" "+get("i_modele")),get("i_options")].filter(Boolean).join(" · ");
+    reco=[get("i_reco_garantie"),get("i_reco_par")&&("proposé par "+get("i_reco_par"))].filter(Boolean).join(" — ");
+  }
+  try{
+    const r=await fetch("/fiche-dda/conseil",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({besoins,reco,ecartes})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||"Erreur");set(P+"justif",d.texte);saveForm();
+  }catch(e){$(P+"err").textContent="⚠️ "+e.message;$(P+"err").classList.remove("hidden");}
+  finally{$(P+"spin").classList.add("hidden");btn.disabled=false;}
+});
+
+function init(){
+  const n=new Date(),dj=`${String(n.getDate()).padStart(2,"0")}/${String(n.getMonth()+1).padStart(2,"0")}/${n.getFullYear()}`;
+  if(!get("s_date"))set("s_date",dj); if(!get("i_date"))set("i_date",dj);
+  restoreForm();
+  const t=sessionStorage.getItem("dda_tpl");
+  if(t){const b=document.querySelector(`.picker button[data-t="${t}"]`);if(b)b.click();}
+  // pré-remplissage santé depuis le comparateur : APRÈS restoreForm(), sinon
+  // restoreForm() écrase aussitôt le champ (il repart de l'ancien snapshot où
+  // ce champ est vide) et la garantie recommandée n'apparaît jamais.
+  try{const p=JSON.parse(sessionStorage.getItem("dda_prefill")||"null");
+    if(p){set("s_reco_garantie",[p.assureur,p.formule,p.cotisation].filter(Boolean).join(" — "));sessionStorage.removeItem("dda_prefill");}
+  }catch(e){}
+  saveForm();
+}
+init();
+sessList();
+</script>
+</body>
+</html>

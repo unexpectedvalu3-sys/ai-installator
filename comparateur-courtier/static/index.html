@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparateur Courtier</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#fff; --ink:#152433; --muted:#5a6b7d;
+    --line:#e3e9f0; --teal:#1e6fb5; --accent:#f07e26;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+        font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif; line-height:1.6; }
+  .top{ display:flex; align-items:center; gap:12px; padding:18px 5%;
+        border-bottom:1px solid var(--line); background:var(--card); }
+  .mark{ width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
+         background:linear-gradient(160deg,var(--teal),#17568c); color:#fff; font-weight:700; }
+  .top b{ font-size:1.05rem; letter-spacing:-.01em; }
+  .top .sp{ margin-left:auto; }
+  .top a{ color:var(--muted); text-decoration:none; font-weight:600; font-size:.9rem; }
+  .top a:hover{ color:var(--ink); }
+  .wrap{ max-width:900px; margin:0 auto; padding:56px 5% 80px; }
+  h1{ font-size:1.9rem; letter-spacing:-.02em; margin:0 0 6px; }
+  .lead{ color:var(--muted); margin:0 0 40px; max-width:60ch; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width:640px){ .grid{ grid-template-columns:1fr; } }
+  .card{ display:block; text-decoration:none; color:inherit; background:var(--card);
+         border:1px solid var(--line); border-radius:16px; padding:28px;
+         transition:border-color .2s, box-shadow .2s, transform .2s; }
+  .card:hover{ border-color:#cdd8e4; box-shadow:0 12px 30px -14px rgba(12,36,54,.2); transform:translateY(-2px); }
+  .ic{ width:46px; height:46px; border-radius:12px; display:grid; place-items:center;
+       font-size:1.4rem; margin-bottom:16px; }
+  .ic-a{ background:#e3eef8; }
+  .ic-b{ background:#fdebdb; }
+  .card h2{ font-size:1.2rem; margin:0 0 6px; }
+  .card p{ color:var(--muted); font-size:.94rem; margin:0; }
+  .card .go{ display:inline-flex; align-items:center; gap:6px; margin-top:16px;
+             color:var(--teal); font-weight:650; font-size:.9rem; }
+  footer{ color:var(--muted); font-size:.8rem; margin-top:48px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <span class="mark">C</span>
+    <b>Comparateur Courtier</b>
+    <span class="sp"></span>
+    <a href="/logout">Déconnexion</a>
+  </div>
+  <div class="wrap">
+    <h1>Vos outils</h1>
+    <p class="lead">Comparez les garanties de mutuelle et formalisez votre devoir de conseil. Vos travaux en cours sont enregistrés et retrouvables dans chaque outil.</p>
+    <div class="grid">
+      <a class="card" href="/comparateur">
+        <div class="ic ic-a">⚖️</div>
+        <h2>Comparateur de mutuelle</h2>
+        <p>Déposez les devis assureurs : l'assistant aligne les garanties poste par poste, désigne la meilleure offre et rédige un courrier de synthèse pour le client.</p>
+        <span class="go">Ouvrir le comparateur →</span>
+      </a>
+      <a class="card" href="/fiche-dda">
+        <div class="ic ic-b">📝</div>
+        <h2>Fiche devoir de conseil</h2>
+        <p>Générez la fiche DDA (Code des assurances) : infos du cabinet, besoins du client et justification du conseil rédigée automatiquement, prête à imprimer.</p>
+        <span class="go">Ouvrir la fiche DDA →</span>
+      </a>
+    </div>
+    <footer>Outil interne du cabinet — aucune donnée de santé n'est collectée ni stockée.</footer>
+  </div>
+</body>
+</html>
