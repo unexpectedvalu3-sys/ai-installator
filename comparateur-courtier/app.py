@@ -138,9 +138,17 @@ def update_check():
             break
     if not tag or not asset_url:
         return {"update_available": False, "tag": tag or "", "url": ""}
-    # version actuelle = date de l'exe (approx.) ; on compare par tag
-    # si la release existe et contient l'asset, on propose la maj
+    # compare la version courante (embarquée) avec le tag de la release
+    try:
+        import embedded_config as _cfg
+        current = _cfg.APP_VERSION.lstrip("v")
+    except Exception:
+        current = "0"
+    remote = tag.lstrip("v")
+    if remote <= current:
+        return {"update_available": False, "tag": tag, "url": "", "current": current}
     return {"update_available": True, "tag": tag, "url": asset_url,
+            "current": current,
             "notes": (release.get("body") or "")[:500]}
 
 

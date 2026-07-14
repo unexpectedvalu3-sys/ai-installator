@@ -20,6 +20,7 @@ from pathlib import Path
 BASE = Path(__file__).parent
 EXE_NAME = "ComparateurCourtier"
 ISCC = r"C:\Users\admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
+APP_VERSION = "1.0.2"   # incrémenter à chaque build + release
 
 
 def _gen_hash(password):
@@ -53,6 +54,7 @@ def _build_embedded_config():
             print(f"[!] {k} manquant dans keys.txt"); sys.exit(1)
     pwd_hash = _gen_hash(cfg["APP_PASSWORD"])
     lines = [
+        f'APP_VERSION = {APP_VERSION!r}',
         f'ANTHROPIC_API_KEY = {cfg["ANTHROPIC_API_KEY"]!r}',
         f'OPENROUTER_API_KEY = {cfg["OPENROUTER_API_KEY"]!r}',
         f'LLM_MODEL = {cfg.get("LLM_MODEL", "claude-sonnet-4-6")!r}',
