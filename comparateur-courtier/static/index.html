@@ -14,8 +14,7 @@
         font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif; line-height:1.6; }
   .top{ display:flex; align-items:center; gap:12px; padding:18px 5%;
         border-bottom:1px solid var(--line); background:var(--card); }
-  .mark{ width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
-         background:linear-gradient(160deg,var(--teal),#17568c); color:#fff; font-weight:700; }
+  .mark{ width:38px; height:38px; border-radius:9px; display:grid; place-items:center; overflow:hidden; }
   .top b{ font-size:1.05rem; letter-spacing:-.01em; }
   .top .sp{ margin-left:auto; }
   .top a{ color:var(--muted); text-decoration:none; font-weight:600; font-size:.9rem; }
@@ -42,7 +41,7 @@
 </head>
 <body>
   <div class="top">
-    <span class="mark">C</span>
+    <span class="mark"><img src="/static/mascotte.png" style="width:100%;height:100%;object-fit:cover;border-radius:9px"></span>
     <b>Comparateur Courtier</b>
     <span class="sp"></span>
     <a href="/logout">Déconnexion</a>
