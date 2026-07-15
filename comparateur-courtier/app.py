@@ -195,7 +195,8 @@ _UPDATE_ASSET = "ComparateurCourtier.exe"
 
 
 def _latest_asset_url():
-    """Renvoie (tag, asset_url) de la dernière release ; asset_url None si absent."""
+    """Renvoie (tag, asset_url, size, sha256) de la dernière release ;
+    asset_url None si absent, sha256 vide si l'API ne fournit pas de digest."""
     import urllib.request
     req = urllib.request.Request(
         f"https://api.github.com/repos/{_UPDATE_REPO}/releases/latest",
@@ -205,15 +206,17 @@ def _latest_asset_url():
     tag = release.get("tag_name", "")
     for a in release.get("assets", []):
         if a.get("name", "").lower() == _UPDATE_ASSET.lower():
-            return tag, a["browser_download_url"]
-    return tag, None
+            d = str(a.get("digest") or "")
+            sha = d[7:].lower() if d.startswith("sha256:") else ""
+            return tag, a["browser_download_url"], int(a.get("size") or 0), sha
+    return tag, None, 0, ""
 
 
-def _do_update(asset_url, tag):
-    """Télécharge le nouvel exe EN STREAMING (met à jour _UPDATE['pct']), remplace
-    l'exe en cours, puis relance le nouvel exe DÉTACHÉ — le mode détaché évite que
-    l'enfant hérite d'un handle sur le dossier temp _MEI (cause du warning au
-    redémarrage). Tourne dans un thread."""
+def _do_update(asset_url, tag, asset_size=0, asset_sha=""):
+    """Télécharge le nouvel exe EN STREAMING (met à jour _UPDATE['pct']), vérifie
+    taille + SHA256, AUTO-TESTE le nouvel exe (--selftest) avant de remplacer l'exe
+    en cours, puis relance DÉTACHÉ. Tourne dans un thread. Si une étape échoue, la
+    version actuelle — qui fonctionne — reste en place."""
     import urllib.request, sys, subprocess, time
     try:
         req = urllib.request.Request(asset_url, headers={"User-Agent": "ComparateurCourtier"})
@@ -222,7 +225,7 @@ def _do_update(asset_url, tag):
             buf = bytearray()
             got = 0
             with _UPDATE_LOCK:
-                _UPDATE.update(state="downloading", pct=0, downloaded=0, total=total, tag=tag, error="")
+                _UPDATE.update(state="downloading", pct=0, downloaded=0, total=total or asset_size, tag=tag, error="")
             while True:
                 chunk = r.read(262144)          # 256 Ko
                 if not chunk:
@@ -239,17 +242,52 @@ def _do_update(asset_url, tag):
             _UPDATE.update(state="error", error=f"Téléchargement : {e}")
         return
     # Téléchargement tronqué (connexion coupée) -> NE PAS installer un exe corrompu.
-    if total and len(data) != total:
+    expected = asset_size or total
+    if expected and len(data) != expected:
         with _UPDATE_LOCK:
             _UPDATE.update(state="error",
-                           error=f"Téléchargement incomplet ({len(data)}/{total} octets). Réessaie la mise à jour.")
+                           error=f"Téléchargement incomplet ({len(data)}/{expected} octets). Réessaie la mise à jour.")
         return
-    # remplace l'exe (rename trick Windows)
+    if asset_sha:
+        import hashlib
+        if hashlib.sha256(data).hexdigest().lower() != asset_sha:
+            with _UPDATE_LOCK:
+                _UPDATE.update(state="error", error="Fichier téléchargé corrompu (empreinte SHA256 différente). Réessaie.")
+            return
+
     exe = Path(sys.executable) if getattr(sys, "frozen", False) else Path(sys.argv[0]).resolve()
     tmp = exe.with_suffix(".exe.new")
     old = exe.with_suffix(".exe.old")
     try:
         tmp.write_bytes(data)
+    except Exception as e:
+        with _UPDATE_LOCK:
+            _UPDATE.update(state="error", error=f"Écriture impossible : {e}")
+        return
+
+    # AUTO-TEST du nouvel exe avant de toucher à l'exe en service : il doit
+    # s'extraire et charger tous ses modules (attrape un exe abîmé ou une
+    # extraction sabotée par l'antivirus). En exe seulement (pas en dev).
+    if getattr(sys, "frozen", False):
+        with _UPDATE_LOCK:
+            _UPDATE.update(state="verifying", pct=100)
+        try:
+            rc = subprocess.run([str(tmp), "--selftest"], timeout=240).returncode
+        except Exception:
+            rc = -1
+        if rc != 0:
+            try:
+                tmp.unlink()
+            except Exception:
+                pass
+            with _UPDATE_LOCK:
+                _UPDATE.update(state="error",
+                               error=f"La nouvelle version a échoué l'auto-test (code {rc}). "
+                                     "Mise à jour annulée : la version actuelle reste en place.")
+            return
+
+    # remplace l'exe (rename trick Windows)
+    try:
         if old.exists():
             old.unlink()
         exe.rename(old)
@@ -285,14 +323,14 @@ async def update_apply():
         if _UPDATE["state"] in ("downloading", "restarting"):
             return {"started": True, "state": _UPDATE["state"]}
     try:
-        tag, asset_url = _latest_asset_url()
+        tag, asset_url, asset_size, asset_sha = _latest_asset_url()
     except Exception as e:
         return JSONResponse({"error": f"Impossible de vérifier : {e}"}, status_code=502)
     if not asset_url:
         return JSONResponse({"error": "Aucune mise à jour disponible."}, status_code=404)
     with _UPDATE_LOCK:
-        _UPDATE.update(state="downloading", pct=0, downloaded=0, total=0, tag=tag, error="")
-    threading.Thread(target=_do_update, args=(asset_url, tag), daemon=True).start()
+        _UPDATE.update(state="downloading", pct=0, downloaded=0, total=asset_size, tag=tag, error="")
+    threading.Thread(target=_do_update, args=(asset_url, tag, asset_size, asset_sha), daemon=True).start()
     return {"started": True, "tag": tag}
 
 

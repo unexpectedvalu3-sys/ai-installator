@@ -169,11 +169,17 @@ def _check_update(icon=None):
         bulle(f"Vous avez déjà la dernière version ({current}).")
         return
 
-    # Cherche l'asset (le nouvel .exe) dans la release
+    # Cherche l'asset (le nouvel .exe) dans la release + sa taille/empreinte
     asset_url = None
+    asset_size = 0
+    asset_sha = ""
     for a in release.get("assets", []):
         if a.get("name", "").lower() == UPDATE_ASSET.lower():
             asset_url = a["browser_download_url"]
+            asset_size = int(a.get("size") or 0)
+            d = str(a.get("digest") or "")
+            if d.startswith("sha256:"):
+                asset_sha = d[7:].lower()
             break
     if not asset_url:
         bulle(f"Release {tag} trouvée mais l'exe n'y est pas ({UPDATE_ASSET}).")
@@ -207,16 +213,45 @@ def _check_update(icon=None):
         return
     set_title("Comparateur Courtier")
     # Téléchargement tronqué (connexion coupée) -> NE PAS installer un exe corrompu.
-    if total and len(data) != total:
-        bulle(f"Téléchargement incomplet ({len(data)}/{total} octets). Réessaie la mise à jour.")
+    expected = asset_size or total
+    if expected and len(data) != expected:
+        bulle(f"Téléchargement incomplet ({len(data)}/{expected} octets). Réessaie la mise à jour.")
         return
+    if asset_sha:
+        import hashlib
+        if hashlib.sha256(data).hexdigest().lower() != asset_sha:
+            bulle("Fichier téléchargé corrompu (empreinte SHA256 différente). Réessaie la mise à jour.")
+            return
 
-    # Remplace l'exe en cours (Windows : on peut renommer un exe en cours d'exécution)
     exe = Path(sys.executable) if getattr(sys, "frozen", False) else Path(sys.argv[0])
     tmp = exe.with_suffix(".exe.new")
     old = exe.with_suffix(".exe.old")
     try:
         tmp.write_bytes(data)
+    except Exception as e:
+        bulle(f"Écriture du fichier de mise à jour impossible :\n{e}")
+        return
+
+    # AUTO-TEST : le nouvel exe doit s'extraire et charger ses modules AVANT de
+    # remplacer l'exe en service. S'il échoue (antivirus, fichier abîmé…), on
+    # annule -> la version actuelle, qui fonctionne, reste en place.
+    set_title("Comparateur Courtier — vérification de la mise à jour…")
+    try:
+        rc = subprocess.run([str(tmp), "--selftest"], timeout=240).returncode
+    except Exception:
+        rc = -1
+    set_title("Comparateur Courtier")
+    if rc != 0:
+        try:
+            tmp.unlink()
+        except Exception:
+            pass
+        bulle(f"La nouvelle version a échoué l'auto-test (code {rc}). "
+              "Mise à jour annulée : ta version actuelle reste en place. Réessaie plus tard.")
+        return
+
+    # Remplace l'exe en cours (Windows : on peut renommer un exe en cours d'exécution)
+    try:
         if old.exists():
             old.unlink()
         exe.rename(old)           # renomme l'exe en cours (autorisé sous Windows)
@@ -283,6 +318,23 @@ def main():
 
 
 if __name__ == "__main__":
+    if "--selftest" in sys.argv:
+        # Auto-test utilisé par la mise à jour : le nouvel exe doit s'extraire et
+        # charger tous ses modules lourds AVANT de remplacer l'exe en service.
+        # Exit 0 = sain ; autre = on garde la version actuelle.
+        try:
+            import ssl              # noqa: F401  (_ssl + OpenSSL)
+            import app              # noqa: F401  (fastapi, pydantic, httpx…)
+            import uvicorn          # noqa: F401
+            import pystray          # noqa: F401
+            from PIL import Image   # noqa: F401  (_imaging)
+            os._exit(0)
+        except Exception:
+            try:
+                (APP_DIR / "selftest_erreur.log").write_text(traceback.format_exc(), encoding="utf-8")
+            except Exception:
+                pass
+            os._exit(3)
     try:
         main()
     except Exception:
@@ -290,4 +342,21 @@ if __name__ == "__main__":
             (APP_DIR / "comparateur_erreur.log").write_text(traceback.format_exc(), encoding="utf-8")
         except Exception:
             pass
+        # Échec transitoire d'extraction (_MEI incomplet : antivirus qui verrouille
+        # les DLL fraîchement écrites, typique juste après une mise à jour) : on se
+        # relance UNE fois en silence (nouvelle extraction) au lieu d'afficher la
+        # boîte d'erreur. CC_RELAUNCHED évite toute boucle infinie.
+        if getattr(sys, "frozen", False) and not os.environ.get("CC_RELAUNCHED"):
+            import subprocess
+            env = dict(os.environ, CC_RELAUNCHED="1")
+            flags = 0
+            for _n in ("DETACHED_PROCESS", "CREATE_NEW_PROCESS_GROUP", "CREATE_NO_WINDOW"):
+                flags |= getattr(subprocess, _n, 0)
+            time.sleep(2)
+            try:
+                subprocess.Popen([sys.executable], cwd=str(APP_DIR), env=env,
+                                 close_fds=True, creationflags=flags)
+                os._exit(1)
+            except Exception:
+                pass
         raise

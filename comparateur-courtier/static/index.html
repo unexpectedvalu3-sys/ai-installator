@@ -94,6 +94,10 @@ async function updPoll(){
       updOverlay('<h2 style="margin:0 0 6px">Échec de la mise à jour</h2><p style="opacity:.85;margin:0 0 16px">'+(d.error||'')+'</p><button onclick="location.reload()" style="padding:9px 20px;border:0;border-radius:999px;cursor:pointer;font-weight:600">Fermer</button>');
       return;
     }
+    if(d.state==='verifying'){
+      updOverlay('<h2 style="margin:0 0 4px">Mise à jour '+(d.tag||'')+'</h2><p style="opacity:.8;margin:0">Vérification de la nouvelle version… (~10 s)</p>'+updBar(100));
+      setTimeout(updPoll,700);return;
+    }
     if(d.state==='restarting'){updWaitBack();return;}
     const pct=d.pct||0;
     const mo=d.total?(' — '+(d.downloaded/1048576).toFixed(0)+' / '+(d.total/1048576).toFixed(0)+' Mo'):'';
