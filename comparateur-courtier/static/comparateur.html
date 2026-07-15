@@ -124,7 +124,7 @@ function addFiles(list){const seen=new Set(picked.map(fkey));[...list].forEach(f
 function renderFiles(){
   $("#filelist").innerHTML=picked.length?picked.map((f,i)=>`<span class="fchip">${f.name}<b data-i="${i}" title="retirer">✕</b></span>`).join("")+(picked.length>=5?' <span style="color:#96631f">— max 5 atteint</span>':'')+' <a class="clrsel">vider</a>':"";
   $("#go").disabled=picked.length<2;
-  const fc=$("#filecount");if(fc)fc.textContent=picked.length>0?`${picked.length} devis sélectionné${picked.length>1?'s':''} — ${picked.length<2?'ajoute au moins 2 devis':'clique sur Comparer'}`:"";
+  const fc=$("#filecount");if(fc){var n=picked.length;fc.textContent=n>0?(n+" devis sélectionné"+(n>1?"s":"")+" — "+(n<2?"ajoute au moins 2 devis":"clique sur Comparer")):"";}
   document.querySelectorAll("#filelist .fchip b").forEach(b=>b.onclick=()=>{picked.splice(+b.dataset.i,1);renderFiles();});
   const cs=document.querySelector("#filelist .clrsel");if(cs)cs.onclick=()=>{picked=[];renderFiles();};
 }
@@ -157,7 +157,9 @@ function render(d,keepScroll){
   window._cmp=d;
   const ri=recoIndex(d);const nOff=(d.offres||[]).length;
   const sel=(d._selectedIdx!==undefined&&d._selectedIdx!==null&&d._selectedIdx<nOff)?d._selectedIdx:(ri>=0?ri:0);
-  let countInfo=`<div style="font-size:13px;color:var(--mut);margin-bottom:8px">${nOff} offre${nOff>1?'s':''} détectée${nOff>1?'s':''}${picked.length!=nOff?` (⚠️ ${picked.length} devis envoyés, ${nOff} trouvés — vérifie les PDF)':''}</div>`;
+  var cntTxt=nOff+" offre"+(nOff>1?"s":"")+" détectée"+(nOff>1?"s":"");
+  if(picked.length!=nOff){cntTxt+=" (⚠️ "+picked.length+" devis envoyés, "+nOff+" trouvés — vérifie les PDF)";}
+  let countInfo='<div style="font-size:13px;color:var(--mut);margin-bottom:8px">'+cntTxt+'</div>';
   let head='<tr><th class="poste">Garantie</th>'+(d.offres||[]).map((o,i)=>
     `<th class="offer${i===ri?' reco':''}${i===sel?' picked':''}"><h3>${esc(o.assureur)}${i===ri?' ✓':''}</h3><div class="f">${esc(o.formule)}</div><div class="cot">${esc(o.cotisation)}</div>`
     +`<label class="pick"><input type="radio" name="pickoffer" ${i===sel?'checked':''} onchange="pickOffer(${i})"> Choisir pour la fiche DDA</label></th>`).join("")+'</tr>';
