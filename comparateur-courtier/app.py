@@ -70,8 +70,29 @@ app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 
 
 # ---------------------------------------------------------------- Auth (login)
+# Pages HTML chargées EN MÉMOIRE une fois au démarrage. Robuste : si le dossier
+# temporaire _MEI de PyInstaller perd des fichiers en cours d'exécution, l'app
+# continue de servir (sinon 500 « No such file …_MEI…/static/index.html »).
+_HTML_CACHE = {}
+
+
+def _html(name):
+    v = _HTML_CACHE.get(name)
+    if v is None:
+        try:
+            v = (BASE / "static" / name).read_text(encoding="utf-8")
+            _HTML_CACHE[name] = v
+        except Exception:
+            return ""
+    return v
+
+
+for _n in ("index.html", "login.html", "comparateur.html", "fiche-dda.html"):
+    _html(_n)   # précharge au démarrage, quand le dossier temp est encore intact
+
+
 def _render_login(error=""):
-    html = (BASE / "static" / "login.html").read_text(encoding="utf-8")
+    html = _html("login.html")
     block = f'<div class="err">{error}</div>' if error else ""
     return html.replace("__ERROR__", block, 1)
 
@@ -271,13 +292,13 @@ async def update_apply():
 # ---------------------------------------------------------------- Accueil
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return (BASE / "static" / "index.html").read_text(encoding="utf-8")
+    return _html("index.html")
 
 
 # ---------------------------------------------------------------- Comparateur
 @app.get("/comparateur", response_class=HTMLResponse)
 def comparateur():
-    return (BASE / "static" / "comparateur.html").read_text(encoding="utf-8")
+    return _html("comparateur.html")
 
 
 @app.post("/comparer")
@@ -309,7 +330,7 @@ async def comparateur_export_xlsx(req: Request):
 # ---------------------------------------------------------------- Fiche DDA
 @app.get("/fiche-dda", response_class=HTMLResponse)
 def fiche_dda():
-    return (BASE / "static" / "fiche-dda.html").read_text(encoding="utf-8")
+    return _html("fiche-dda.html")
 
 
 @app.get("/cabinet")
