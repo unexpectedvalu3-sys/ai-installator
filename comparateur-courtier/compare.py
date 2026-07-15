@@ -77,16 +77,26 @@ def _grid_text():
         lines += [f"  - {p}" for p in postes]
     return "\n".join(lines)
 
-PROMPT_TPL = """Tu es l'assistant d'un courtier en assurance. On te fournit PLUSIEURS offres/devis
-de MUTUELLE SANTÉ (souvent un assureur par document). Ta mission :
+PROMPT_TPL = """Tu es l'assistant d'un courtier en assurance. On te fournit PLUSIEURS devis
+de MUTUELLE SANTÉ (un document PDF par assureur). Ta mission :
 
-1) Identifie chaque offre : assureur, nom de la formule/niveau, cotisation mensuelle TTC,
+1) Identifie CHAQUE formule/offre présentée dans chaque document. Un seul PDF peut
+   contenir PLUSIEURS formules (ex. un tableau comparatif de niveaux 1/2/3, ou des
+   options). Tu DOIS toutes les extraire : une entrée dans "offres" par formule.
+   Ne fusionne JAMAIS plusieurs formules en une seule. Ne saute JAMAIS une formule.
+2) Pour CHAQUE offre, relève : assureur, nom de la formule/niveau, cotisation mensuelle TTC,
    et les FRAIS D'ADHÉSION s'ils figurent (ex. "30 €", "2 x 30 €", ou "—" si absent).
-2) Pour CHAQUE offre, relève le niveau de remboursement de CHAQUE poste de la grille ci-dessous,
+3) Pour CHAQUE offre, relève le niveau de remboursement de CHAQUE poste de la grille ci-dessous,
    EXACTEMENT comme écrit sur le devis (ex. "200% BR", "300 €", "100% FR", "forfait 150 €/an").
    Si un poste n'est pas couvert ou pas mentionné : "—".
-3) Identifie le SOUSCRIPTEUR (civilité + nom) s'il figure sur un devis.
-4) Détermine la RECOMMANDATION (meilleur rapport garanties/prix au vu des offres).
+4) Identifie le SOUSCRIPTEUR (civilité + nom) s'il figure sur un devis.
+5) Détermine la RECOMMANDATION (meilleur rapport garanties/prix au vu des offres).
+
+RÈGLE CRITIQUE — EXHAUSTIVITÉ :
+- Relis CHAQUE document en ENTIER et liste TOUTES les formules qui y sont présentées.
+- Si un document contient 3 formules (ex. Niveau 1, 2, 3), tu DOIS créer 3 offres.
+- Compte bien : le nombre d'offres dans ta réponse doit correspondre au total de
+  toutes les formules trouvées dans tous les documents. Si tu en as oublié, recompte.
 
 Grille des postes, groupée par MODULE — utilise EXACTEMENT ces libellés, dans cet ordre :
 {grid}
@@ -106,7 +116,7 @@ Règles STRICTES :
 - "garanties" couvre TOUS les postes de la grille, dans l'ordre, avec le bon "module".
 - N'invente AUCUN chiffre. Poste absent = "—". Montants avec virgule décimale.
 - **assureur** = l'organisme qui porte le risque / émet le contrat. Sur un devis,
-  c'est l'entité citée dans les MENTIONS LÉGALES en bas de page (ex. « ILONA SAS
+  c'est l'entité citée dans les MENTIONS LÉGALES en bas de page (ex. « X SAS
   d'assurance / de courtage en assurances »), PAS le cabinet/conseiller en haut
   (« votre conseil », « réunion X assurances » = le courtier émetteur). N'invente
   JAMAIS un nom d'assureur qui n'apparaît pas dans le document : si le nom n'est
