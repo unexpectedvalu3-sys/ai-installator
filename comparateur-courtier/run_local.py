@@ -99,7 +99,8 @@ def _tray_icon(appmod):
     menu = pystray.Menu(
         pystray.MenuItem("Ouvrir le Comparateur", _open),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Vérifier les mises à jour", lambda icon, item: _check_update()),
+        pystray.MenuItem("Vérifier les mises à jour",
+                         lambda icon, item: threading.Thread(target=_check_update, args=(icon,), daemon=True).start()),
         pystray.MenuItem("Quitter", _quit),
     )
     pystray.Icon("comparateur-courtier", image, "Comparateur Courtier", menu).run()
@@ -111,11 +112,44 @@ UPDATE_REPO = "unexpectedvalu3-sys/ai-installator"
 UPDATE_ASSET = "ComparateurCourtier.exe"   # nom du fichier dans la release
 
 
-def _check_update():
-    """Vérifie GitHub Releases pour une nouvelle version. Si trouvé :
-    télécharge le nouvel .exe, remplace l'exe en cours (rename trick Windows),
-    relance. Tourne dans un thread pour ne pas bloquer le tray."""
-    import urllib.request, json, tempfile, shutil, subprocess
+def _ver(s):
+    """'v1.0.10' -> (1, 0, 10) pour comparer les versions numériquement
+    (une comparaison de chaînes casserait : '1.0.10' < '1.0.3' en lexicographique)."""
+    parts = str(s or "0").lstrip("vV").split(".")
+    out = []
+    for p in parts:
+        try:
+            out.append(int(p))
+        except ValueError:
+            out.append(0)
+    return tuple(out)
+
+
+def _check_update(icon=None):
+    """Vérifie GitHub Releases pour une nouvelle version. Si trouvée : télécharge
+    le nouvel .exe EN STREAMING (progression dans l'info-bulle), remplace l'exe en
+    cours (rename trick Windows), relance. Appelé DANS UN THREAD (voir le menu du
+    tray) -> ne bloque jamais l'icône. Notifications en bulle (non bloquantes)
+    plutôt qu'en boîte modale, sinon le téléchargement attend un clic OK."""
+    import urllib.request, json, subprocess
+
+    def bulle(msg, title="Mise à jour"):
+        """Notification non bloquante (bulle du tray). Repli sur messagebox seulement
+        si l'icône n'expose pas notify()."""
+        try:
+            if icon is not None and hasattr(icon, "notify"):
+                icon.notify(msg, title)
+                return
+        except Exception:
+            pass
+        _notify(title, msg, info=True)
+
+    def set_title(txt):
+        try:
+            if icon is not None:
+                icon.title = txt
+        except Exception:
+            pass
 
     api = f"https://api.github.com/repos/{UPDATE_REPO}/releases/latest"
     try:
@@ -123,12 +157,22 @@ def _check_update():
         with urllib.request.urlopen(req, timeout=15) as r:
             release = json.loads(r.read().decode())
     except Exception as e:
-        _notify("Mise à jour", f"Impossible de vérifier les mises à jour :\n{e}")
+        bulle(f"Impossible de vérifier les mises à jour :\n{e}")
         return
 
     tag = release.get("tag_name", "")
     if not tag:
-        _notify("Mise à jour", "Aucune mise à jour disponible.")
+        bulle("Aucune mise à jour disponible.")
+        return
+
+    # Déjà à jour ? -> on évite un téléchargement de 46 Mo inutile.
+    try:
+        import embedded_config as _cfg
+        current = _cfg.APP_VERSION
+    except Exception:
+        current = "0"
+    if _ver(tag) <= _ver(current):
+        bulle(f"Vous avez déjà la dernière version ({current}).")
         return
 
     # Cherche l'asset (le nouvel .exe) dans la release
@@ -138,19 +182,36 @@ def _check_update():
             asset_url = a["browser_download_url"]
             break
     if not asset_url:
-        _notify("Mise à jour", f"Release {tag} trouvée mais l'exe n'y est pas.\n"
-                f"Le fichier attendu : {UPDATE_ASSET}")
+        bulle(f"Release {tag} trouvée mais l'exe n'y est pas ({UPDATE_ASSET}).")
         return
 
-    # Télécharge dans un temp
-    _notify(f"Mise à jour {tag}", "Téléchargement en cours…", info=True)
+    # Téléchargement en streaming, avec progression dans l'info-bulle (46 Mo).
+    bulle(f"Téléchargement de la mise à jour {tag}…\n"
+          "L'application redémarrera automatiquement à la fin.")
     try:
         req = urllib.request.Request(asset_url, headers={"User-Agent": "ComparateurCourtier"})
-        with urllib.request.urlopen(req, timeout=120) as r:
-            data = r.read()
+        with urllib.request.urlopen(req, timeout=600) as r:
+            total = int(r.headers.get("Content-Length") or 0)
+            buf = bytearray()
+            got = 0
+            last_pct = -5
+            while True:
+                chunk = r.read(262144)          # 256 Ko par lecture
+                if not chunk:
+                    break
+                buf += chunk
+                got += len(chunk)
+                if total:
+                    pct = int(got * 100 / total)
+                    if pct >= last_pct + 5:      # rafraîchit tous les 5 %
+                        last_pct = pct
+                        set_title(f"Comparateur Courtier — mise à jour {pct} %")
+            data = bytes(buf)
     except Exception as e:
-        _notify("Mise à jour", f"Échec du téléchargement :\n{e}")
+        set_title("Comparateur Courtier")
+        bulle(f"Échec du téléchargement :\n{e}")
         return
+    set_title("Comparateur Courtier")
 
     # Remplace l'exe en cours (Windows : on peut renommer un exe en cours d'exécution)
     exe = Path(sys.executable) if getattr(sys, "frozen", False) else Path(sys.argv[0])
@@ -163,13 +224,20 @@ def _check_update():
         exe.rename(old)           # renomme l'exe en cours (autorisé sous Windows)
         tmp.rename(exe)           # le nouvel exe prend sa place
     except Exception as e:
-        _notify("Mise à jour", f"Échec du remplacement de l'exe :\n{e}")
+        bulle(f"Échec du remplacement de l'exe :\n{e}")
         return
 
-    _notify(f"Mise à jour {tag}", "Mise à jour installée. L'application va redémarrer.", info=True)
-    time.sleep(2)
-    # Relance le nouvel exe et quitte
-    subprocess.Popen([str(exe)], cwd=str(APP_DIR))
+    bulle(f"Mise à jour {tag} installée. L'application redémarre…")
+    time.sleep(1.5)
+    # Relance le nouvel exe DÉTACHÉ (n'hérite pas des handles -> évite le warning
+    # "Failed to remove temporary directory _MEI…") puis quitte.
+    flags = 0
+    for name in ("DETACHED_PROCESS", "CREATE_NEW_PROCESS_GROUP", "CREATE_NO_WINDOW"):
+        flags |= getattr(subprocess, name, 0)
+    try:
+        subprocess.Popen([str(exe)], cwd=str(APP_DIR), close_fds=True, creationflags=flags)
+    except Exception:
+        subprocess.Popen([str(exe)], cwd=str(APP_DIR))
     os._exit(0)
 
 
@@ -189,7 +257,33 @@ def _notify(title, msg, info=False):
         pass  # silencieux si tkinter indisponible
 
 
+def _cleanup_stale():
+    """Nettoie les résidus des MAJ précédentes : ancien exe (.old) + dossiers temp
+    _MEI* orphelins de PyInstaller. Best-effort : un dossier encore verrouillé (app
+    en cours d'exécution, y compris la nôtre) n'est pas supprimé."""
+    import glob, shutil, tempfile
+    try:
+        if getattr(sys, "frozen", False):
+            old = Path(sys.executable).with_suffix(".exe.old")
+            if old.exists():
+                try:
+                    old.unlink()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    try:
+        current = getattr(sys, "_MEIPASS", None)
+        for d in glob.glob(os.path.join(tempfile.gettempdir(), "_MEI*")):
+            if current and os.path.abspath(d) == os.path.abspath(current):
+                continue
+            shutil.rmtree(d, ignore_errors=True)   # ne supprime pas un dossier verrouillé
+    except Exception:
+        pass
+
+
 def main():
+    _cleanup_stale()
     import app as appmod
     threading.Thread(target=_run_server, args=(appmod,), daemon=True).start()
     threading.Thread(target=_open_browser, daemon=True).start()

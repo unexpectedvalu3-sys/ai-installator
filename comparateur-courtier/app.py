@@ -16,6 +16,7 @@ Routes :
 """
 import os
 import json
+import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -140,57 +141,83 @@ def update_check():
             break
     if not tag or not asset_url:
         return {"update_available": False, "tag": tag or "", "url": ""}
-    # compare la version courante (embarquée) avec le tag de la release
+    # compare la version courante (embarquée) avec le tag de la release,
+    # numériquement (une comparaison de chaînes casserait à 1.0.10 vs 1.0.3).
     try:
         import embedded_config as _cfg
-        current = _cfg.APP_VERSION.lstrip("v")
+        current = _cfg.APP_VERSION
     except Exception:
         current = "0"
-    remote = tag.lstrip("v")
-    if remote <= current:
+
+    def _ver(s):
+        out = []
+        for p in str(s or "0").lstrip("vV").split("."):
+            try:
+                out.append(int(p))
+            except ValueError:
+                out.append(0)
+        return tuple(out)
+
+    if _ver(tag) <= _ver(current):
         return {"update_available": False, "tag": tag, "url": "", "current": current}
     return {"update_available": True, "tag": tag, "url": asset_url,
             "current": current,
             "notes": (release.get("body") or "")[:500]}
 
 
-@app.post("/update")
-async def update_apply():
-    """Télécharge le nouvel exe, remplace l'exe en cours, relance.
-    L'exe actuel se termine -> le navigateur perdra la connexion pendant ~3s."""
-    import urllib.request, urllib.error, json, os, sys, subprocess, time
-    from pathlib import Path
-    repo = "unexpectedvalu3-sys/ai-installator"
-    asset_name = "ComparateurCourtier.exe"
-    try:
-        req = urllib.request.Request(
-            f"https://api.github.com/repos/{repo}/releases/latest",
-            headers={"User-Agent": "ComparateurCourtier"})
-        with urllib.request.urlopen(req, timeout=15) as r:
-            release = json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return JSONResponse({"error": "Aucune mise à jour disponible."}, status_code=404)
-        return JSONResponse({"error": f"Impossible de vérifier : {e}"}, status_code=502)
-    asset_url = None
+# --- État partagé du téléchargement de MAJ (pour la barre de progression) ---
+_UPDATE = {"state": "idle", "pct": 0, "downloaded": 0, "total": 0, "tag": "", "error": ""}
+_UPDATE_LOCK = threading.Lock()
+_UPDATE_REPO = "unexpectedvalu3-sys/ai-installator"
+_UPDATE_ASSET = "ComparateurCourtier.exe"
+
+
+def _latest_asset_url():
+    """Renvoie (tag, asset_url) de la dernière release ; asset_url None si absent."""
+    import urllib.request
+    req = urllib.request.Request(
+        f"https://api.github.com/repos/{_UPDATE_REPO}/releases/latest",
+        headers={"User-Agent": "ComparateurCourtier"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        release = json.loads(r.read().decode())
+    tag = release.get("tag_name", "")
     for a in release.get("assets", []):
-        if a.get("name", "").lower() == asset_name.lower():
-            asset_url = a["browser_download_url"]
-            break
-    if not asset_url:
-        return JSONResponse({"error": "Aucune mise à jour disponible."}, status_code=404)
-    # télécharge
+        if a.get("name", "").lower() == _UPDATE_ASSET.lower():
+            return tag, a["browser_download_url"]
+    return tag, None
+
+
+def _do_update(asset_url, tag):
+    """Télécharge le nouvel exe EN STREAMING (met à jour _UPDATE['pct']), remplace
+    l'exe en cours, puis relance le nouvel exe DÉTACHÉ — le mode détaché évite que
+    l'enfant hérite d'un handle sur le dossier temp _MEI (cause du warning au
+    redémarrage). Tourne dans un thread."""
+    import urllib.request, sys, subprocess, time
     try:
         req = urllib.request.Request(asset_url, headers={"User-Agent": "ComparateurCourtier"})
-        with urllib.request.urlopen(req, timeout=180) as r:
-            data = r.read()
+        with urllib.request.urlopen(req, timeout=600) as r:
+            total = int(r.headers.get("Content-Length") or 0)
+            buf = bytearray()
+            got = 0
+            with _UPDATE_LOCK:
+                _UPDATE.update(state="downloading", pct=0, downloaded=0, total=total, tag=tag, error="")
+            while True:
+                chunk = r.read(262144)          # 256 Ko
+                if not chunk:
+                    break
+                buf += chunk
+                got += len(chunk)
+                if total:
+                    with _UPDATE_LOCK:
+                        _UPDATE["pct"] = int(got * 100 / total)
+                        _UPDATE["downloaded"] = got
+            data = bytes(buf)
     except Exception as e:
-        return JSONResponse({"error": f"Échec du téléchargement : {e}"}, status_code=502)
+        with _UPDATE_LOCK:
+            _UPDATE.update(state="error", error=f"Téléchargement : {e}")
+        return
     # remplace l'exe (rename trick Windows)
-    if getattr(sys, "frozen", False):
-        exe = Path(sys.executable)
-    else:
-        exe = Path(sys.argv[0]).resolve()
+    exe = Path(sys.executable) if getattr(sys, "frozen", False) else Path(sys.argv[0]).resolve()
     tmp = exe.with_suffix(".exe.new")
     old = exe.with_suffix(".exe.old")
     try:
@@ -200,11 +227,45 @@ async def update_apply():
         exe.rename(old)
         tmp.rename(exe)
     except Exception as e:
-        return JSONResponse({"error": f"Échec du remplacement : {e}"}, status_code=500)
-    # relance le nouvel exe et quitte
-    subprocess.Popen([str(exe)], cwd=str(exe.parent))
-    time.sleep(1)
+        with _UPDATE_LOCK:
+            _UPDATE.update(state="error", error=f"Remplacement : {e}")
+        return
+    with _UPDATE_LOCK:
+        _UPDATE.update(state="restarting", pct=100)
+    time.sleep(1.5)   # laisse le navigateur afficher 100 % avant la coupure
+    flags = 0
+    for name in ("DETACHED_PROCESS", "CREATE_NEW_PROCESS_GROUP", "CREATE_NO_WINDOW"):
+        flags |= getattr(subprocess, name, 0)
+    try:
+        subprocess.Popen([str(exe)], cwd=str(exe.parent), close_fds=True, creationflags=flags)
+    except Exception:
+        subprocess.Popen([str(exe)], cwd=str(exe.parent))
     os._exit(0)
+
+
+@app.get("/update/progress")
+def update_progress():
+    with _UPDATE_LOCK:
+        return dict(_UPDATE)
+
+
+@app.post("/update")
+async def update_apply():
+    """Démarre le téléchargement de la MAJ en arrière-plan et rend la main tout de
+    suite : le navigateur suit l'avancement via GET /update/progress."""
+    with _UPDATE_LOCK:
+        if _UPDATE["state"] in ("downloading", "restarting"):
+            return {"started": True, "state": _UPDATE["state"]}
+    try:
+        tag, asset_url = _latest_asset_url()
+    except Exception as e:
+        return JSONResponse({"error": f"Impossible de vérifier : {e}"}, status_code=502)
+    if not asset_url:
+        return JSONResponse({"error": "Aucune mise à jour disponible."}, status_code=404)
+    with _UPDATE_LOCK:
+        _UPDATE.update(state="downloading", pct=0, downloaded=0, total=0, tag=tag, error="")
+    threading.Thread(target=_do_update, args=(asset_url, tag), daemon=True).start()
+    return {"started": True, "tag": tag}
 
 
 # ---------------------------------------------------------------- Accueil

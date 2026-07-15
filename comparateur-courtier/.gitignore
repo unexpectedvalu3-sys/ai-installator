@@ -15,4 +15,5 @@ comparateur.log
 comparateur_erreur.log
 # secrets embarqués (clés API + identifiants) — JAMAIS commités
 keys.txt
+clients/
 embedded_config.py

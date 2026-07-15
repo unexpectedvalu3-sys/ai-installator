@@ -67,20 +67,54 @@
     <footer>Outil interne du cabinet — aucune donnée de santé n'est collectée ni stockée.</footer>
   </div>
 <script>
+function updOverlay(html){
+  let o=document.getElementById('updOverlay');
+  if(!o){o=document.createElement('div');o.id='updOverlay';
+    o.style.cssText='position:fixed;inset:0;background:rgba(12,36,54,.93);color:#fff;display:grid;place-items:center;z-index:9999;font-family:system-ui,-apple-system,Segoe UI,sans-serif';
+    document.body.appendChild(o);}
+  o.innerHTML='<div style="width:min(420px,86vw);text-align:center">'+html+'</div>';
+}
+function updBar(pct){
+  return '<div style="height:12px;background:rgba(255,255,255,.18);border-radius:99px;overflow:hidden;margin:20px 0 8px">'
+    +'<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#1e6fb5,#f07e26);border-radius:99px;transition:width .3s"></div></div>';
+}
+async function updWaitBack(){
+  updOverlay('<h2 style="margin:0 0 6px">Redémarrage…</h2><p style="opacity:.8;margin:0">L\'application redémarre, un instant.</p>'+updBar(100));
+  for(let i=0;i<90;i++){
+    await new Promise(r=>setTimeout(r,1000));
+    try{const h=await fetch('/healthz',{cache:'no-store'});if(h.ok){location.reload();return;}}catch(e){}
+  }
+  updOverlay('<h2>Presque terminé</h2><p style="opacity:.8">Recharge la page si elle ne revient pas seule.</p>');
+}
+async function updPoll(){
+  try{
+    const r=await fetch('/update/progress',{cache:'no-store'});
+    const d=await r.json();
+    if(d.state==='error'){
+      updOverlay('<h2 style="margin:0 0 6px">Échec de la mise à jour</h2><p style="opacity:.85;margin:0 0 16px">'+(d.error||'')+'</p><button onclick="location.reload()" style="padding:9px 20px;border:0;border-radius:999px;cursor:pointer;font-weight:600">Fermer</button>');
+      return;
+    }
+    if(d.state==='restarting'){updWaitBack();return;}
+    const pct=d.pct||0;
+    const mo=d.total?(' — '+(d.downloaded/1048576).toFixed(0)+' / '+(d.total/1048576).toFixed(0)+' Mo'):'';
+    updOverlay('<h2 style="margin:0 0 4px">Mise à jour '+(d.tag||'')+'</h2><p style="opacity:.8;margin:0">Téléchargement '+pct+' %'+mo+'</p>'+updBar(pct));
+    setTimeout(updPoll,500);
+  }catch(e){ updWaitBack(); }   // serveur peut-être en train de redémarrer
+}
 async function checkUpdate(){
   const btn=document.getElementById('btnUpdate');
   btn.textContent='🔄 Vérification…'; btn.disabled=true;
   try{
-    const r=await fetch('/update');
+    const r=await fetch('/update',{cache:'no-store'});
     const d=await r.json();
-    if(d.error){alert(d.error);btn.textContent='🔄 Mises à jour';btn.disabled=false;return;}
-    if(!d.update_available){alert('Aucune mise à jour disponible.');btn.textContent='🔄 Mises à jour';btn.disabled=false;return;}
-    if(confirm('Mise à jour '+d.tag+' disponible.\n\nCliquer sur OK pour télécharger et installer.\nL\'application va redémarrer automatiquement.')){
-      btn.textContent='⬇️ Téléchargement…';
-      fetch('/update',{method:'POST'}).then(()=>{}).catch(()=>{});
-      setTimeout(()=>{document.body.innerHTML='<div style="text-align:center;padding:80px;font-family:sans-serif"><h2>Mise à jour en cours…</h2><p>L\'application va redémarrer dans quelques secondes. Rechargez cette page.</p></div>';},2000);
-    }else{btn.textContent='🔄 Mises à jour';btn.disabled=false;}
-  }catch(e){alert('Erreur: '+e);btn.textContent='🔄 Mises à jour';btn.disabled=false;}
+    btn.textContent='🔄 Mises à jour'; btn.disabled=false;
+    if(d.error){alert(d.error);return;}
+    if(!d.update_available){alert('Vous avez déjà la dernière version'+(d.current?' ('+d.current+')':'')+'.');return;}
+    if(!confirm('Mise à jour '+d.tag+' disponible.\n\nTélécharger et installer maintenant ? L\'application redémarrera automatiquement.'))return;
+    updOverlay('<h2 style="margin:0 0 4px">Mise à jour '+d.tag+'</h2><p style="opacity:.8;margin:0">Démarrage du téléchargement…</p>'+updBar(0));
+    await fetch('/update',{method:'POST'}).catch(()=>{});
+    updPoll();
+  }catch(e){btn.textContent='🔄 Mises à jour';btn.disabled=false;alert('Erreur: '+e);}
 }
 </script></body>
 </html>

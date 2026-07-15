@@ -20,7 +20,7 @@ from pathlib import Path
 BASE = Path(__file__).parent
 EXE_NAME = "ComparateurCourtier"
 ISCC = r"C:\Users\admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
-APP_VERSION = "1.0.2"   # incrémenter à chaque build + release
+APP_VERSION = "1.0.6"   # incrémenter à chaque build + release
 
 
 def _gen_hash(password):
@@ -30,17 +30,22 @@ def _gen_hash(password):
         base64.b64encode(salt).decode(), base64.b64encode(dk).decode())
 
 
-def _build_embedded_config():
-    """Lit keys.txt (gitignore) et génère embedded_config.py (compilé dans l'exe).
-    Contient les clés API + identifiants + hash du mot de passe.
-    Au 1er lancement, run_local.py écrit un .env à partir de ces valeurs."""
-    keys_file = BASE / "keys.txt"
+def _build_embedded_config(client=None):
+    """Génère embedded_config.py (compilé dans l'exe) à partir d'un profil client.
+
+    - `python build_exe.py`         -> lit keys.txt (compte par défaut)
+    - `python build_exe.py sophie`  -> lit clients/sophie.txt (un compte par client)
+
+    Chaque profil contient les clés API + identifiants + mot de passe (haché ici).
+    Au 1er lancement, run_local.py écrit un .env à partir de ces valeurs. Les
+    fichiers de profil (keys.txt et clients/*.txt) sont gitignore : jamais commités."""
+    keys_file = (BASE / "clients" / f"{client}.txt") if client else (BASE / "keys.txt")
     if not keys_file.exists():
-        print("[!] keys.txt introuvable. Crée-le avec :")
+        print(f"[!] Profil introuvable : {keys_file.relative_to(BASE)}. Crée-le avec :")
         print("    ANTHROPIC_API_KEY=sk-ant-...")
         print("    OPENROUTER_API_KEY=sk-or-...")
-        print("    APP_USER=courtier")
-        print("    APP_PASSWORD=...")
+        print("    APP_USER=<identifiant>")
+        print("    APP_PASSWORD=<mot de passe>")
         sys.exit(1)
     cfg = {}
     for line in keys_file.read_text(encoding="utf-8").splitlines():
@@ -51,7 +56,7 @@ def _build_embedded_config():
     required = ["ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "APP_USER", "APP_PASSWORD"]
     for k in required:
         if not cfg.get(k):
-            print(f"[!] {k} manquant dans keys.txt"); sys.exit(1)
+            print(f"[!] {k} manquant (ou vide) dans {keys_file.relative_to(BASE)}"); sys.exit(1)
     pwd_hash = _gen_hash(cfg["APP_PASSWORD"])
     lines = [
         f'APP_VERSION = {APP_VERSION!r}',
@@ -80,8 +85,10 @@ def _build_embedded_config():
 
 
 # --- 0) Génère embedded_config.py ---
-print("=== 0/2 Génération embedded_config.py ===")
-_build_embedded_config()
+# Profil client optionnel en argument : `python build_exe.py sophie` -> clients/sophie.txt
+_client = sys.argv[1] if len(sys.argv) > 1 else None
+print(f"=== 0/2 Génération embedded_config.py ({_client or 'keys.txt'}) ===")
+_build_embedded_config(_client)
 
 # --- 1) Build PyInstaller (.exe) ---
 for d in ("build", "dist"):
