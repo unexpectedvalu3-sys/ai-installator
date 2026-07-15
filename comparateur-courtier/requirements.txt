@@ -7,3 +7,4 @@ anthropic
 openpyxl
 itsdangerous
 pdfplumber
+cryptography

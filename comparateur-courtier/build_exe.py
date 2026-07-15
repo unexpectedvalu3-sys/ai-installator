@@ -46,6 +46,7 @@ cmd = [
     "--name", EXE_NAME,
     "--icon", str(BASE / "static" / "mascotte.png"),
     "--add-data", f"static{';'}static",
+    "--add-data", f"accounts.json{';'}.",   # copie embarquée du registre de comptes (fallback hors-ligne)
     "--hidden-import", "version",
     "--collect-all", "pdfplumber",
     "--collect-all", "pdfminer.six",
@@ -72,6 +73,16 @@ print(f"\n[OK] {exe.name} : {exe.stat().st_size / 1024 / 1024:.1f} Mo (génériq
 
 _make_ico()
 
+# --- Installateur UNIVERSEL (v1.2 : connexion par compte, plus de .env client) ---
+ISCC = r"C:\Users\admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
+print("\n=== Installateur universel (setup_ComparateurCourtier.exe) ===")
+r = subprocess.run([ISCC, f"/DAppVersion={APP_VERSION}", str(BASE / "ComparateurCourtier.iss")], cwd=str(BASE))
+if r.returncode != 0:
+    print("[!] Build installateur échoué."); sys.exit(1)
+setup = BASE / "dist" / "setup_ComparateurCourtier.exe"
+print(f"[OK] {setup.name} : {setup.stat().st_size / 1024 / 1024:.1f} Mo")
+
 print("\n=== Terminé ===")
-print(f"  Exe générique : {exe}")
-print("  Étape suivante pour un client :  python make_client.py <nom>")
+print(f"  Exe générique         : {exe}")
+print(f"  Installateur universel: {setup}  (le MÊME pour tous les clients)")
+print("  Ajouter un compte     :  python make_account.py <nom>  puis commit+push accounts.json")

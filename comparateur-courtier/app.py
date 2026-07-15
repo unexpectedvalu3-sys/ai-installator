@@ -29,6 +29,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response, RedirectResp
 from fastapi.staticfiles import StaticFiles
 
 import auth
+import accounts
 import compare
 import fichedda
 import sessions_store
@@ -48,13 +49,13 @@ PUBLIC_PREFIXES = ("/static/",)
 @app.middleware("http")
 async def require_session(request: Request, call_next):
     path = request.url.path
-    # Fail-closed : sans configuration d'auth complète, rien n'est servi.
+    # Fail-closed : sans SECRET_KEY (générée au 1er lancement par l'exe), rien n'est servi.
     if not auth.configured():
         if path == "/healthz":
             return JSONResponse({"status": "auth_not_configured"}, status_code=503)
         return HTMLResponse(
-            "<h1>Configuration incomplète</h1><p>APP_USER, APP_PASSWORD_HASH et "
-            "SECRET_KEY doivent être définis (voir set_password.py).</p>",
+            "<h1>Configuration incomplète</h1><p>SECRET_KEY manquante — relance "
+            "l'application (elle est générée automatiquement au premier lancement).</p>",
             status_code=503)
     if path in PUBLIC_PATHS or any(path.startswith(p) for p in PUBLIC_PREFIXES):
         return await call_next(request)
@@ -113,7 +114,15 @@ async def login_submit(request: Request):
     form = await request.form()
     user = (form.get("user") or "").strip()
     password = form.get("password") or ""
-    if not auth.check_credentials(user, password):
+    # 1) Compte « boîte mail » : registre chiffré (accounts.json — voir accounts.py).
+    #    Le déchiffrement réussi EST la preuve du mot de passe, et fournit les clés
+    #    API du compte, appliquées à ce process.
+    config = accounts.login(user, password)
+    if config:
+        accounts.apply_config(config)
+        user = user.strip().lower()
+    # 2) Rétro-compatibilité : compte historique du .env (installs d'avant v1.2).
+    elif not auth.check_credentials(user, password):
         return HTMLResponse(_render_login("Identifiant ou mot de passe incorrect."),
                             status_code=401)
     resp = RedirectResponse("/", status_code=303)

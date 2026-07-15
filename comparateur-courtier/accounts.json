@@ -1,0 +1,18 @@
+{
+  "accounts": {
+    "sophie.severin": {
+      "kdf": "pbkdf2-sha256",
+      "iter": 1000000,
+      "salt": "vzT46/j5xBSvJbzP/vCAbA==",
+      "nonce": "4ph+SFukH4SKx1dt",
+      "data": "Wm3271ujJpvOHnKxhZuUFkRjqE3/YeE7o/Px1Mw7vPTy6YTHJ3r/KnM1ku+0C5TwnLPvwqpskT9eTg6r4wLzV3YiXMlCAwZlsdNk0YXHs6n1vceiQKkx9x5RXcTdtC6zwncEFftiMJ1WJOgvRDGZfLvTRJQLl1Uq6XK9bvNtr7jL5jMaPGmYQqQ9K+ng87DntyZPbsaot74fx/kZT0ZYkL3hiu2Glbrc4a2njyIXwCCskz0ymIrbR6DKnM/6fndT4TZqOzFmbwyjF4g9NPIidPS9CTydzdNjmS+8UaT84882OjE2vKWFnOyVMncWZ+heORnUpkpdpUjZhtW6C3N946Stm/BAyBqNrXBNtLufTxDxRndOewgYRD+RN+PpSEve8mrYcsthYxA9m1HkLG1FFF7eyUXlygCPFKlUA203epfRCIPDWKN5L3qOMCb2zlz+7i23lrl/bvuhn5NRIA=="
+    },
+    "courtier": {
+      "kdf": "pbkdf2-sha256",
+      "iter": 1000000,
+      "salt": "9EAatX9tNZi2v9WeCf/NtQ==",
+      "nonce": "FgYmukZWum8KEEzw",
+      "data": "709lJmJpGEL9+BjrYz0vMgEfFcNFDsgCAd+1J9ruR31VXnJM4XCF/jB29QbxNhnQBuKNPxlBZ25FAXad6wy/dDMmedgNUcS/9Qs7+sOOSjJ1Zn3cdql/7ggAOuX9pr9hZKX0mfDDztrRNRkba9SM3CRdtkxf0vRUyQmTzDWZ5qoX6oLdWQXWYSbuNZXM7jfGcH9li4HfmJNwevcLCrPl6AZWmPep/EUHJZfj7W4FwyBRS7r9nv94z8mrtdnNR0TzTz3/J8UHRyyAM/0tmcHBr6BCCgxBK65mKlIyzdDRrfCxnpMmzjNa50W6GuwIiAdeU3soD42WeRflYNayRRhozzFoIhmfG1iq4jTt0GJAHB9/5fFMs590uExbjuxrIfesDq1zraD6n0VHEt3+n3SBtd5hCFJ0nLxukhf2BZ9ilEF3MINjooIj3uf4qLZGeiACqONbGFRQLw=="
+    }
+  }
+}

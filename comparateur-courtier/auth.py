@@ -27,7 +27,7 @@ APP_PASSWORD_HASH = os.environ.get("APP_PASSWORD_HASH", "")
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
 
 COOKIE_NAME = "courtier_session"
-SESSION_MAX_AGE = 60 * 60 * 12          # 12 h
+SESSION_MAX_AGE = 60 * 60 * 24 * 30     # 30 jours — connexion « boîte mail »
 # Cookie Secure par défaut (HTTPS en prod). Mettre COOKIE_INSECURE=1 pour le dev
 # local en http:// (sinon le navigateur refuse le cookie et la connexion boucle).
 COOKIE_SECURE = os.environ.get("COOKIE_INSECURE") != "1"
@@ -36,8 +36,16 @@ _serializer = URLSafeTimedSerializer(SECRET_KEY or "dev-insecure-key", salt="cou
 
 
 def configured():
-    """True seulement si les trois secrets nécessaires sont présents."""
-    return bool(APP_USER and APP_PASSWORD_HASH and SECRET_KEY)
+    """True si l'app peut signer des sessions. Les identifiants eux-mêmes viennent
+    soit du registre de comptes (accounts.py — mode « boîte mail »), soit du .env
+    historique (APP_USER/APP_PASSWORD_HASH — installs d'avant la v1.2)."""
+    return bool(SECRET_KEY)
+
+
+def legacy_available():
+    """True si un compte « historique » (.env posé par un ancien installateur)
+    est présent — conservé pour la rétro-compatibilité des installs existantes."""
+    return bool(APP_USER and APP_PASSWORD_HASH)
 
 
 def hash_password(password, iterations=200_000):

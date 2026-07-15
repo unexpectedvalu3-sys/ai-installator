@@ -43,19 +43,25 @@ PORT = int(os.environ.get("PORT", "8000"))
 
 os.environ.setdefault("DATA_DIR", str(APP_DIR / "data"))   # persistance à côté de l'exe
 
-# Config (clés API + identifiants) : lue dans le .env déposé PAR L'INSTALLATEUR à
-# côté de l'exe. L'exe est GÉNÉRIQUE — aucun secret embarqué : le même exe sert tous
-# les clients, seul leur .env diffère (voir make_client.py). Au 1er lancement, on
-# ajoute un SECRET_KEY unique par install s'il n'y est pas déjà. Les mises à jour
-# remplacent l'exe mais préservent ce .env -> le client reste configuré.
+# Configuration locale. Depuis la v1.2 (connexion « boîte mail »), l'installateur
+# est UNIVERSEL : il ne dépose plus de .env — les identifiants et clés API viennent
+# du registre de comptes au login (accounts.py). Le .env local ne sert plus qu'à :
+#   - SECRET_KEY (signature des sessions), générée au 1er lancement, unique par install ;
+#   - COOKIE_INSECURE=1 (app locale en http://127.0.0.1) ;
+#   - rétro-compatibilité : les .env posés par les anciens installateurs (identifiants
+#     + clés) continuent d'être lus et de fonctionner tels quels.
 try:
     _envp = APP_DIR / ".env"
-    if _envp.exists():
-        _txt = _envp.read_text(encoding="utf-8")
-        if "SECRET_KEY=" not in _txt:
-            import secrets as _s
-            _txt = _txt.rstrip("\n") + f"\nSECRET_KEY={_s.token_urlsafe(48)}\n"
-            _envp.write_text(_txt, encoding="utf-8")
+    _txt = _envp.read_text(encoding="utf-8") if _envp.exists() else ""
+    _add = []
+    if "SECRET_KEY=" not in _txt:
+        import secrets as _s
+        _add.append(f"SECRET_KEY={_s.token_urlsafe(48)}")
+    if "COOKIE_INSECURE=" not in _txt:
+        _add.append("COOKIE_INSECURE=1")
+    if _add:
+        _txt = (_txt.rstrip("\n") + "\n" if _txt else "") + "\n".join(_add) + "\n"
+        _envp.write_text(_txt, encoding="utf-8")
     from dotenv import load_dotenv
     load_dotenv(_envp, override=True)
 except Exception:
