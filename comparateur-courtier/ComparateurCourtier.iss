@@ -12,7 +12,7 @@
 
 #define MyAppName "Comparateur Courtier"
 #define MyAppExeName "ComparateurCourtier.exe"
-#define MyAppVersion "1.0.8"
+#define MyAppVersion "1.0.9"
 #define MyAppPublisher "AI Installator"
 
 [Setup]

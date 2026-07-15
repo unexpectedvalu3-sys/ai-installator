@@ -237,6 +237,12 @@ def _do_update(asset_url, tag):
         with _UPDATE_LOCK:
             _UPDATE.update(state="error", error=f"Téléchargement : {e}")
         return
+    # Téléchargement tronqué (connexion coupée) -> NE PAS installer un exe corrompu.
+    if total and len(data) != total:
+        with _UPDATE_LOCK:
+            _UPDATE.update(state="error",
+                           error=f"Téléchargement incomplet ({len(data)}/{total} octets). Réessaie la mise à jour.")
+        return
     # remplace l'exe (rename trick Windows)
     exe = Path(sys.executable) if getattr(sys, "frozen", False) else Path(sys.argv[0]).resolve()
     tmp = exe.with_suffix(".exe.new")

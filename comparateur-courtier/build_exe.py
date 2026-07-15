@@ -20,7 +20,7 @@ from pathlib import Path
 BASE = Path(__file__).parent
 EXE_NAME = "ComparateurCourtier"
 ISCC = r"C:\Users\admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
-APP_VERSION = "1.0.8"   # incrémenter à chaque build + release
+APP_VERSION = "1.0.9"   # incrémenter à chaque build + release
 
 
 def _gen_hash(password):

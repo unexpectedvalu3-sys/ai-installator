@@ -212,6 +212,10 @@ def _check_update(icon=None):
         bulle(f"Échec du téléchargement :\n{e}")
         return
     set_title("Comparateur Courtier")
+    # Téléchargement tronqué (connexion coupée) -> NE PAS installer un exe corrompu.
+    if total and len(data) != total:
+        bulle(f"Téléchargement incomplet ({len(data)}/{total} octets). Réessaie la mise à jour.")
+        return
 
     # Remplace l'exe en cours (Windows : on peut renommer un exe en cours d'exécution)
     exe = Path(sys.executable) if getattr(sys, "frozen", False) else Path(sys.argv[0])
