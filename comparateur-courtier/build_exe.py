@@ -20,7 +20,7 @@ from pathlib import Path
 BASE = Path(__file__).parent
 EXE_NAME = "ComparateurCourtier"
 ISCC = r"C:\Users\admin\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
-APP_VERSION = "1.0.6"   # incrémenter à chaque build + release
+APP_VERSION = "1.0.7"   # incrémenter à chaque build + release
 
 
 def _gen_hash(password):
@@ -106,6 +106,8 @@ cmd = [
     "--collect-all", "pdfminer.six",
     "--collect-all", "openpyxl",
     "--collect-all", "anthropic",
+    "--collect-all", "pydantic",
+    "--collect-all", "pydantic_core",   # embarque _pydantic_core.pyd (sinon crash au démarrage)
     "--hidden-import", "uvicorn.logging",
     "--hidden-import", "uvicorn.protocols.http.auto",
     "--hidden-import", "uvicorn.protocols.websockets.auto",

@@ -258,10 +258,12 @@ def _notify(title, msg, info=False):
 
 
 def _cleanup_stale():
-    """Nettoie les résidus des MAJ précédentes : ancien exe (.old) + dossiers temp
-    _MEI* orphelins de PyInstaller. Best-effort : un dossier encore verrouillé (app
-    en cours d'exécution, y compris la nôtre) n'est pas supprimé."""
-    import glob, shutil, tempfile
+    """Nettoie l'ancien exe (.old) laissé par une MAJ précédente. Best-effort.
+
+    IMPORTANT : on NE touche PAS aux dossiers temp _MEI*. PyInstaller y extrait ses
+    binaires (dont _pydantic_core.pyd), et les supprimer depuis l'app en cours —
+    avant que tout soit importé — casse le démarrage (« No module named
+    pydantic_core._pydantic_core »). Windows nettoie les _MEI orphelins tout seul."""
     try:
         if getattr(sys, "frozen", False):
             old = Path(sys.executable).with_suffix(".exe.old")
@@ -270,14 +272,6 @@ def _cleanup_stale():
                     old.unlink()
                 except Exception:
                     pass
-    except Exception:
-        pass
-    try:
-        current = getattr(sys, "_MEIPASS", None)
-        for d in glob.glob(os.path.join(tempfile.gettempdir(), "_MEI*")):
-            if current and os.path.abspath(d) == os.path.abspath(current):
-                continue
-            shutil.rmtree(d, ignore_errors=True)   # ne supprime pas un dossier verrouillé
     except Exception:
         pass
 
