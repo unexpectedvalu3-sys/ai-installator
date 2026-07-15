@@ -43,28 +43,23 @@ PORT = int(os.environ.get("PORT", "8000"))
 
 os.environ.setdefault("DATA_DIR", str(APP_DIR / "data"))   # persistance à côté de l'exe
 
-# Config embarquée (clés API + identifiants) compilée dans l'exe par build_exe.py.
-# Au premier lancement, on écrit un .env à côté de l'exe avec ces valeurs + un
-# SECRET_KEY unique par install. Les lancements suivants lisent ce .env directement.
+# Config (clés API + identifiants) : lue dans le .env déposé PAR L'INSTALLATEUR à
+# côté de l'exe. L'exe est GÉNÉRIQUE — aucun secret embarqué : le même exe sert tous
+# les clients, seul leur .env diffère (voir make_client.py). Au 1er lancement, on
+# ajoute un SECRET_KEY unique par install s'il n'y est pas déjà. Les mises à jour
+# remplacent l'exe mais préservent ce .env -> le client reste configuré.
 try:
-    import embedded_config as _cfg
-    _need_env = not (APP_DIR / ".env").exists()
-    if _need_env:
-        import secrets as _s
-        env_lines = list(_cfg.LINES) + [
-            f"SECRET_KEY={_s.token_urlsafe(48)}",
-            "COOKIE_INSECURE=1",
-        ]
-        (APP_DIR / ".env").write_text("\n".join(env_lines) + "\n", encoding="utf-8")
+    _envp = APP_DIR / ".env"
+    if _envp.exists():
+        _txt = _envp.read_text(encoding="utf-8")
+        if "SECRET_KEY=" not in _txt:
+            import secrets as _s
+            _txt = _txt.rstrip("\n") + f"\nSECRET_KEY={_s.token_urlsafe(48)}\n"
+            _envp.write_text(_txt, encoding="utf-8")
     from dotenv import load_dotenv
-    load_dotenv(APP_DIR / ".env", override=True)
+    load_dotenv(_envp, override=True)
 except Exception:
-    # fallback : .env déjà présent (dev local sans build)
-    try:
-        from dotenv import load_dotenv
-        load_dotenv(APP_DIR / ".env", override=True)
-    except Exception:
-        pass
+    pass
 
 
 def _open_browser():
@@ -167,8 +162,7 @@ def _check_update(icon=None):
 
     # Déjà à jour ? -> on évite un téléchargement de 46 Mo inutile.
     try:
-        import embedded_config as _cfg
-        current = _cfg.APP_VERSION
+        from version import APP_VERSION as current
     except Exception:
         current = "0"
     if _ver(tag) <= _ver(current):

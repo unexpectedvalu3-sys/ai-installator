@@ -16,6 +16,28 @@ extraction de dossiers / export CSV. Un déploiement par courtier, protégé par
 Aucune donnée de santé n'est demandée ni stockée. Aucun calcul de tarif : l'app
 aligne des garanties déclarées sur les devis, elle ne produit pas de prix.
 
+## Distribution : exe Windows autonome, un installateur par client
+L'app est livrée comme **exe Windows** (tray icon, ouvre le navigateur, auto-update
+via GitHub Releases). L'exe est **GÉNÉRIQUE** (aucun secret) : la config de chaque
+client (clés API + identifiants) vit dans un `.env` que **son installateur** dépose
+à côté de l'exe. Un seul build d'exe sert tous les clients.
+
+```bash
+# 1) Construire l'exe générique — UNE fois (ou à chaque changement de code, ~2 min)
+python build_exe.py                     # -> dist/ComparateurCourtier.exe
+
+# 2) Un installateur par client — quelques secondes chacun
+python make_client.py sophie            # lit clients/sophie.txt -> dist/setup_sophie.exe
+python make_client.py                   # lit keys.txt (compte par défaut) -> dist/setup_courtier.exe
+```
+- **Profils clients** : `keys.txt` (défaut) ou `clients/<nom>.txt` — format :
+  `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `APP_USER`, `APP_PASSWORD`, (`LLM_MODEL`,
+  `COMPARE_MODEL`). **Gitignore : jamais commités.**
+- **Version** : dans `version.py` (source unique). Bumper puis `build_exe.py`.
+- **Publier une MAJ** : `gh release create vX.Y.Z dist/ComparateurCourtier.exe …`.
+  L'exe étant générique, l'asset public ne contient aucun secret. Les clients cliquent
+  « Vérifier les mises à jour » (leur `.env` local est préservé).
+
 ## Lancer en local (dev)
 ```bash
 cd comparateur-courtier

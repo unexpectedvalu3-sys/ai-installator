@@ -20,7 +20,9 @@ import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
-load_dotenv(override=True)
+# override=False : ce que run_local (exe) ou l'environnement a déjà chargé fait
+# autorité. Évite qu'un .env du dossier courant écrase la config du client.
+load_dotenv(override=False)
 
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response, RedirectResponse
@@ -162,11 +164,10 @@ def update_check():
             break
     if not tag or not asset_url:
         return {"update_available": False, "tag": tag or "", "url": ""}
-    # compare la version courante (embarquée) avec le tag de la release,
-    # numériquement (une comparaison de chaînes casserait à 1.0.10 vs 1.0.3).
+    # compare la version courante avec le tag de la release, numériquement
+    # (une comparaison de chaînes casserait à 1.0.10 vs 1.0.3).
     try:
-        import embedded_config as _cfg
-        current = _cfg.APP_VERSION
+        from version import APP_VERSION as current
     except Exception:
         current = "0"
 
