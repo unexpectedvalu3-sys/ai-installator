@@ -268,16 +268,31 @@ def _check_update(icon=None):
 
     bulle(f"Mise à jour {tag} installée. L'application redémarre…")
     time.sleep(1.5)
-    # Relance le nouvel exe DÉTACHÉ (n'hérite pas des handles -> évite le warning
-    # "Failed to remove temporary directory _MEI…") puis quitte.
+    _spawn_with_babysitter(exe, APP_DIR)
+    os._exit(0)
+
+
+def _spawn_with_babysitter(exe, cwd):
+    """Relance le nouvel exe DÉTACHÉ, via un petit surveillant PowerShell : si
+    l'app n'est pas revenue au bout de ~22 s (raté d'extraction du bootloader
+    PyInstaller au redémarrage — antivirus qui verrouille l'exe fraîchement
+    remplacé), il la relance UNE fois. La garde d'instance unique (main) rend un
+    éventuel double départ inoffensif."""
+    import subprocess
+    port = int(os.environ.get("PORT", "8000"))
+    ps = ("$e='{exe}';$w='{cwd}';Start-Process -FilePath $e -WorkingDirectory $w;"
+          "Start-Sleep 22;"
+          "try{{$null=Invoke-WebRequest ('http://127.0.0.1:{port}/healthz') -UseBasicParsing -TimeoutSec 5}}"
+          "catch{{Start-Process -FilePath $e -WorkingDirectory $w}}").format(
+        exe=str(exe), cwd=str(cwd), port=port)
     flags = 0
     for name in ("DETACHED_PROCESS", "CREATE_NEW_PROCESS_GROUP", "CREATE_NO_WINDOW"):
         flags |= getattr(subprocess, name, 0)
     try:
-        subprocess.Popen([str(exe)], cwd=str(APP_DIR), close_fds=True, creationflags=flags)
+        subprocess.Popen(["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps],
+                         close_fds=True, creationflags=flags)
     except Exception:
-        subprocess.Popen([str(exe)], cwd=str(APP_DIR))
-    os._exit(0)
+        subprocess.Popen([str(exe)], cwd=str(cwd))
 
 
 def _notify(title, msg, info=False):
@@ -315,7 +330,36 @@ def _cleanup_stale():
         pass
 
 
+def _port_available(p):
+    import socket
+    s = socket.socket()
+    try:
+        s.bind((HOST, p)); s.close(); return True
+    except OSError:
+        s.close(); return False
+
+
+def _instance_alive(p):
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"http://{HOST}:{p}/healthz", timeout=3) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+
 def main():
+    global PORT
+    # Instance unique : si l'app tourne déjà sur ce port, on ouvre simplement le
+    # navigateur et on se retire (plus de crash « port occupé » en double-clic).
+    if not _port_available(PORT):
+        if _instance_alive(PORT):
+            webbrowser.open(f"http://{HOST}:{PORT}")
+            return
+        for cand in range(PORT + 1, PORT + 21):   # port pris par une autre app -> suivant
+            if _port_available(cand):
+                PORT = cand
+                break
     _cleanup_stale()
     import app as appmod
     threading.Thread(target=_run_server, args=(appmod,), daemon=True).start()

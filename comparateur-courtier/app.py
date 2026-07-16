@@ -308,13 +308,19 @@ def _do_update(asset_url, tag, asset_size=0, asset_sha=""):
     with _UPDATE_LOCK:
         _UPDATE.update(state="restarting", pct=100)
     time.sleep(1.5)   # laisse le navigateur afficher 100 % avant la coupure
-    flags = 0
-    for name in ("DETACHED_PROCESS", "CREATE_NEW_PROCESS_GROUP", "CREATE_NO_WINDOW"):
-        flags |= getattr(subprocess, name, 0)
+    # Relance surveillée : si le nouvel exe rate son premier démarrage (raté
+    # d'extraction du bootloader, antivirus), le surveillant le relance une fois.
     try:
-        subprocess.Popen([str(exe)], cwd=str(exe.parent), close_fds=True, creationflags=flags)
+        from run_local import _spawn_with_babysitter
+        _spawn_with_babysitter(exe, exe.parent)
     except Exception:
-        subprocess.Popen([str(exe)], cwd=str(exe.parent))
+        flags = 0
+        for name in ("DETACHED_PROCESS", "CREATE_NEW_PROCESS_GROUP", "CREATE_NO_WINDOW"):
+            flags |= getattr(subprocess, name, 0)
+        try:
+            subprocess.Popen([str(exe)], cwd=str(exe.parent), close_fds=True, creationflags=flags)
+        except Exception:
+            subprocess.Popen([str(exe)], cwd=str(exe.parent))
     os._exit(0)
 
 

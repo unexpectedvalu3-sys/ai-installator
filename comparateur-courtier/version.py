@@ -7,4 +7,4 @@ Bumper ce numéro à chaque release, puis :
 
 Le numéro est embarqué dans l'exe (import) et sert à la vérification de MAJ.
 """
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
