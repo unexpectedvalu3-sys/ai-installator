@@ -41,7 +41,7 @@
   @media (max-width:640px){ .anav{ display:none; } }
 
   /* ---- mise en page ---- */
-  .wrap{ max-width:1160px; margin:0 auto; padding:44px 4% 90px; }
+  .wrap{ max-width:1440px; margin:0 auto; padding:44px 3% 90px; }
   .pagehead{ margin-bottom:30px; }
   .eyebrow{ display:flex; align-items:center; gap:12px; font-size:.66rem; font-weight:650;
     letter-spacing:.28em; text-transform:uppercase; color:var(--accent-deep); margin:0 0 14px; }
@@ -101,10 +101,10 @@
   .sumline .n{ font-family:var(--serif); font-style:italic; color:var(--accent-deep); font-size:1rem; }
   .tablecard{ overflow-x:auto; background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:0 1px 2px rgba(15,34,51,.04); }
   table{ border-collapse:separate; border-spacing:0; width:100%; font-size:.84rem; }
-  th,td{ border-bottom:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top; }
+  th,td{ border-bottom:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
   td+td, th+th{ border-left:1px solid var(--line); }
   thead th{ background:var(--surface); font-weight:650; position:sticky; top:0; z-index:2; border-bottom:2px solid var(--line-strong); }
-  th.poste,td.poste{ background:#FBFAF6; font-weight:600; min-width:210px; width:240px; color:#41505E; }
+  th.poste,td.poste{ background:#FBFAF6; font-weight:600; min-width:170px; width:200px; color:#41505E; }
   tr.modrow .modh{ background:var(--paper); color:var(--accent-deep); font-family:var(--serif); font-style:italic;
     font-weight:460; font-size:.92rem; letter-spacing:.01em; }
   tr.tarif td{ background:#FBFAF6; font-weight:650; }
@@ -195,8 +195,6 @@
         <div class="steps" id="steps">Envoi des devis au serveur…</div>
       </div>
       <div class="err hidden" id="err"></div>
-
-      <div id="result" class="hidden"></div>
     </div>
 
     <div class="aside">
@@ -211,6 +209,9 @@
       </div>
     </div>
   </div>
+
+  <!-- résultats en pleine largeur : le tableau se voit en entier -->
+  <div id="result" class="hidden"></div>
 </div>
 
 <script>

@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
-"""Version de l'application — source unique de vérité.
+﻿# -*- coding: utf-8 -*-
+"""Version de l'application â€” source unique de vÃ©ritÃ©.
 
-Bumper ce numéro à chaque release, puis :
-  1. python build_exe.py          (rebuild l'exe générique)
+Bumper ce numÃ©ro Ã  chaque release, puis :
+  1. python build_exe.py          (rebuild l'exe gÃ©nÃ©rique)
   2. gh release create vX.Y.Z ...  (avec dist/ComparateurCourtier.exe en asset)
 
-Le numéro est embarqué dans l'exe (import) et sert à la vérification de MAJ.
+Le numÃ©ro est embarquÃ© dans l'exe (import) et sert Ã  la vÃ©rification de MAJ.
 """
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
