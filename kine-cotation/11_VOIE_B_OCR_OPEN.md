@@ -97,21 +97,26 @@ Qwen2.5-VL-7B tourne **en local sur la RTX 4070** (12 Go) via Ollama (`qwen2.5vl
 endpoint OpenAI-compatible → provider `selfhosted`). Comparé à Claude Sonnet (voie A, cloud) sur
 les **10 ordonnances synthétiques TAPÉES** (`benchmark/synthetiques/`) :
 
-| Champ | Claude Sonnet (A) | Qwen2.5-VL-7B local (B) |
+| Champ | Claude Sonnet (A) | Qwen2.5-VL-7B local (B) — **après ajustement** |
 |---|---|---|
 | nb_seances | 100 % | 100 % |
 | chirurgie | 70 % | 70 % |
-| domicile | 100 % | 90 % |
-| **bilan** | 100 % | **20 %** |
+| domicile | 100 % | 100 % |
+| bilan | 100 % | **100 %** (était 20 %) |
 | acte top-1 | 80 % | 60 % |
 | acte top-3 / top-5 | 90 % | 90 % |
 | alerte DAP | 89 % | 89 % |
 | perf | ~réseau | ~10 s/image (à chaud) |
 
-**Lecture** : la voie B est **techniquement viable** — un modèle open, gratuit, sur la machine
-d'Enzo, tient la comparaison sur séances/chirurgie/domicile/DAP/top-3. Deux faiblesses : **bilan
-20 %** (Qwen interprète mal `mention_bilan` — probablement corrigeable au **prompt**) et top-1 60 %
-(mais top-1 dépend aussi du matcheur d'actes rudimentaire, pas seulement de l'OCR).
+**Lecture** : la voie B est à **quasi-parité** sur le tapé — un modèle open, gratuit, sur la machine
+d'Enzo, égale Claude Sonnet sur **tous les champs d'extraction** (séances, domicile, bilan) sauf
+top-1 (60 % vs 80 %, qui dépend aussi du matcheur d'actes rudimentaire). Le `chirurgie` à 70 % est
+**partagé** avec Claude → faiblesse de tâche/prompt, pas de modèle.
+
+**Le bilan 20 %→100 % expliqué** : Qwen mettait le *texte* du bilan (« - Bilan diagnostic… ») dans
+`mention_bilan` au lieu de `true`. Corrigé sur 2 fronts (2026-07-18) : prompt (types stricts explicites)
++ coercion « présence » (`_to_bool` : toute chaîne non-vide non-négation = True). Claude non affecté
+(vérifié, aucune régression). Reste vrai : **tapé uniquement, 10 échantillons** — le manuscrit décide.
 
 ⚠️ **Caveats** : (1) **TAPÉ uniquement** — le manuscrit, le vrai juge, n'est pas testé (→ RIMES +
 Malcom) ; (2) **10 échantillons** = bruité, surtout la calibration de confiance (peu fiable pour les

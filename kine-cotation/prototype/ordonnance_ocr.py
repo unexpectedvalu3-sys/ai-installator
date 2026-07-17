@@ -68,6 +68,11 @@ Regles :
 - Deduis 'zone', 'chirurgie' et 'specialite' uniquement si l'ordonnance le permet sans
   ambiguite ; sinon mets 'inconnu' + alerte.
 - Champs texte absents/illisibles : chaine vide "". Seances non indiquees : 0.
+- TYPES STRICTS. Respecte le type de chaque cle, ne mets JAMAIS de texte a la place :
+  * 'domicile', 'urgence', 'mention_bilan' = booleen true ou false (PAS le texte de
+    l'element). Ex. si l'ordonnance mentionne un bilan -> "mention_bilan": true.
+  * 'nb_seances_prescrites' = entier (ex. 30), pas "30 seances".
+  * 'alertes' = liste de chaines (ex. []), jamais une chaine seule.
 - Signale toute ordonnance incomplete ou non conforme (pas de date, pas de prescripteur,
   pas de nombre de seances, mention illisible) dans 'alertes'.
 - 'confiance' = ta confiance globale dans l'extraction (low / medium / high)."""
@@ -101,11 +106,27 @@ def encoder_image(path: Path):
     return ("image", MEDIA_TYPES[ext], base64.standard_b64encode(path.read_bytes()).decode())
 
 
+_NEGATIONS = {"false", "0", "non", "faux", "no", "n", "aucun", "absent", "null", "none", "inconnu"}
+
+
 def _to_bool(v):
-    """Coerce un booleen lache -> bool. 'oui'/'vrai'/'true'/1 -> True ; reste -> False."""
+    """Coerce un booleen de PRESENCE -> bool.
+
+    domicile/urgence/mention_bilan repondent a 'est-ce present ?'. Les modeles open
+    (Qwen) y mettent souvent le TEXTE de l'element ('- Bilan diagnostic...') au lieu
+    de true -> une chaine descriptive non vide = presence = True. Seules les
+    negations explicites (et le vide) valent False. Diagnostic mesure le 2026-07-18.
+    """
     if isinstance(v, bool):
         return v
-    return str(v).strip().lower() in ("true", "1", "oui", "vrai", "yes", "y", "o")
+    if v is None:
+        return False
+    if isinstance(v, (int, float)):
+        return v != 0
+    s = str(v).strip().lower()
+    if not s:
+        return False
+    return s not in _NEGATIONS
 
 
 def _to_int(v):
