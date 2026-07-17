@@ -197,6 +197,13 @@ def ligne(acte, kb, drom=False, date_seance=None):
         "referentiel": acte.get("referentiel", False),
         "chirurgie": acte.get("chirurgie", False),
         "palier": palier["a_partir_du"] if palier else None,
+        # Un palier CONDITIONNEL ne doit jamais changer un tarif en silence : le
+        # risque est asymetrique. S'il n'entre pas en vigueur et qu'on l'a applique,
+        # le kine SURCOTE -> indu. S'il entre en vigueur et qu'on l'ignore, il
+        # sous-cote -> il perd de l'argent, sans risque legal. Dans un produit dont
+        # la promesse est la defendabilite, c'est la surcotation qu'on ne doit pas causer.
+        "conditionnel": bool(palier and palier.get("conditionnel")),
+        "condition": palier.get("condition") if palier else None,
     }
 
 
@@ -218,6 +225,15 @@ def generer_facture(lignes, kb, patient="—", date_seance="—", drom=False, ju
     out.append("-" * 64)
     out.append(f"  {'TOTAL':<6}{'':>6}{total:>8.2f}€")
     out.append("=" * 64)
+    cond = [l for l in lignes if l.get("conditionnel")]
+    if cond:
+        out.append("  /!\\ COTATION SOUS RESERVE :")
+        for l in cond:
+            out.append(f"   {l['code']} {l['coefficient']} applique le palier du {l['palier']}, "
+                       "dont l'entree en vigueur est CONDITIONNELLE.")
+        out.append("   " + (cond[0]["condition"] or "")[:300])
+        out.append("   -> Verifier le tableau SNMKR en vigueur AVANT de facturer.")
+        out.append("-" * 64)
     if alertes:
         out.append("  ALERTES SEANCES / ACCORD PREALABLE :")
         for a in alertes:

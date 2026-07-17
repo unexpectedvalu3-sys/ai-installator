@@ -371,9 +371,10 @@ const isoAujourdhui = ()=>{const d=new Date(); return new Date(d.getTime()-d.get
 let dateSeance = isoAujourdhui();
 
 function acteALaDate(a, d){
-  let r={coefficient:a.coefficient, tarif_metropole:a.tarif_metropole, palier:null};
+  let r={coefficient:a.coefficient, tarif_metropole:a.tarif_metropole, palier:null, conditionnel:false, condition:null};
   (a._paliers||[]).slice().sort((x,y)=>x.a_partir_du<y.a_partir_du?-1:1)
-    .forEach(p=>{ if(d>=p.a_partir_du) r={coefficient:p.coefficient, tarif_metropole:p.tarif_metropole, palier:p.a_partir_du}; });
+    .forEach(p=>{ if(d>=p.a_partir_du) r={coefficient:p.coefficient, tarif_metropole:p.tarif_metropole,
+      palier:p.a_partir_du, conditionnel:!!p.conditionnel, condition:p.condition||null}; });
   return r;
 }
 const frDate = d => d.split('-').reverse().join('/');
@@ -489,6 +490,7 @@ function addActe(i){
   const a=KB.actes[i], v=acteALaDate(a,dateSeance);
   // `src` = index dans KB.actes -> permet de RECOTER la ligne si la date change
   panier.push({src:i,code:a.code,coef:v.coefficient,tarif:tarif(v.coefficient),palier:v.palier,
+    conditionnel:v.conditionnel,condition:v.condition,
     libelle:a.libelle,article:a.article,referentiel:a.referentiel,chirurgie:a.chirurgie,seance:null,region:a.region});
   render();
 }
@@ -501,6 +503,7 @@ function recoter(){
     if(l.src==null) return;                       // bilans/supplements : pas de paliers
     const v=acteALaDate(KB.actes[l.src], dateSeance);
     l.coef=v.coefficient; l.tarif=tarif(v.coefficient); l.palier=v.palier;
+    l.conditionnel=v.conditionnel; l.condition=v.condition;
   });
 }
 
@@ -603,6 +606,19 @@ function render(){
   let h=`<div class="fh"><div>${enteteHTML()}</div>
     <div style="text-align:right"><div class="n">FEUILLE DE SOINS</div><div class="muted">Récapitulatif de cotation</div>
     <div class="muted num">séance du ${today}</div></div></div>`;
+  // Palier CONDITIONNEL : jamais en silence. Risque asymetrique — si le palier
+  // n'entre pas en vigueur et qu'on l'a applique, le kine SURCOTE (indu) ; s'il
+  // entre en vigueur et qu'on l'ignore, il sous-cote (perte, sans risque legal).
+  // La faute qu'on ne doit pas causer est la premiere.
+  const cond = panier.filter(l=>l.conditionnel);
+  if(cond.length){
+    h+=`<div class="alert warn"><b>⚠ Cotation sous réserve</b> — `
+      +cond.map(l=>`<span class="num">${l.code} ${l.coef}</span> applique le palier du `
+        +`<span class="num">${frDate(l.palier)}</span>`).join(', ')
+      +`, dont l'entrée en vigueur est <b>conditionnelle</b> (avenant 7 §C : « sous réserve d'une `
+      +`modification préalable de la liste des actes », et exposée au comité d'alerte ONDAM — `
+      +`précédent du gel de juillet 2025). <b>Vérifie le tableau SNMKR en vigueur avant de facturer.</b></div>`;
+  }
   // les alertes DAP sont le coeur anti-indu : en HAUT, pas en pied de page
   alertes.filter(a=>a.lvl!=='info').forEach(a=>h+=`<div class="alert ${a.lvl}">${a.msg}</div>`);
   h+=`<table class="ftab"><thead><tr><th>Code</th><th>Coef</th><th>Acte</th><th class="r">Tarif</th><th class="noprint"></th></tr></thead><tbody>`;
@@ -668,6 +684,7 @@ function addActeFromOcr(i, prescrites){
   // seance en cours n'est PAS sur l'ordonnance : seul le kine le connait -> il reste
   // null, et le champ « Séance n° » attend sa saisie.
   panier.push({src:i,code:a.code,coef:v.coefficient,tarif:tarif(v.coefficient),palier:v.palier,
+    conditionnel:v.conditionnel,condition:v.condition,
     libelle:a.libelle,article:a.article,
     referentiel:a.referentiel,chirurgie:a.chirurgie,seance:null,
     prescrites:(prescrites===null||prescrites===undefined||prescrites===0)?null:prescrites,region:a.region});

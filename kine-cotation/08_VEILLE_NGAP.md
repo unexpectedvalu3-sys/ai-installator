@@ -51,7 +51,7 @@ la main du matin (v1.1) avait manqués** :
 - **`tools/check_ngap_release.py`** — lit la page SNMKR, prend le PDF le plus récent, compare à
   `_meta.source_url`, et si drift : télécharge, extrait (poppler `pdftotext -layout`), diffe, rapporte.
   Sorties : `0` à jour · `2` drift · `1` erreur. `--json` pour la CI.
-  Les cotations **futures** (`_futur`) sont incluses dans la comparaison — sinon les 5 NMI du 01/09
+  Les cotations **futures** (`_paliers`) sont incluses dans la comparaison — sinon les 5 NMI du 01/09
   seraient signalées « absentes de la base » à chaque passage : **une fausse alarme permanente
   apprend à ignorer l'outil**, et c'est l'alerte DAP qui en meurt.
 - **`.github/workflows/ngap-watch.yml`** — lundi 06:00 UTC. Drift → ouvre (ou commente) une issue
@@ -72,8 +72,26 @@ la main du matin (v1.1) avait manqués** :
   séance**, avec parité vérifiée sur 25 combinaisons. `_meta.applicable_depuis` ajouté : la base
   n'ayant pas d'historique avant le 28/05/2026, coter une séance antérieure est **refusé** plutôt
   que de rendre un barème faux que la justification attesterait.
-- ⚠️ **Confirmer l'année du « 01/09 »** en source primaire — le PDF dit « 01/09 » **sans millésime**,
-  et l'encodage suppose 2026. Si l'hypothèse est fausse, 5 actes neuro basculeront au mauvais moment.
-  C'est le dernier point non vérifié de la chaîne.
+- ~~Confirmer l'année du « 01/09 »~~ → **fait : 2026, source primaire.** Avenant 7 §C (arrêté du
+  21/08/2023, [JORFTEXT000047995983](https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000047995983)) :
+  « *Les dispositions du présent C s'appliquent à compter du 1er septembre 2026* », visant les actes de
+  l'**article 4** dont le **coefficient est 10 ou 11**, revalorisés d'**un point** → correspond exactement
+  aux 5 actes encodés.
+- ⚠️ **Mais la date est doublement conditionnelle** (base v1.4, paliers marqués `conditionnel`) :
+  (a) « sous réserve d'une modification préalable de la liste des actes » (art. L. 162-1-7) ;
+  (b) exposée au **comité d'alerte ONDAM** — précédent : juin 2025 a gelé les revalorisations de juillet
+  2025, ce qui est la raison d'être de l'avenant 8. Avis 2026-1 (20/04) écarte le dépassement sérieux ;
+  avis 2026-2 (25/06) « n'écarte pas le risque » et appelle à annuler les mises en réserve — formulation
+  de **vigilance**, pas le constat de « risque sérieux » qui déclenche l'alerte. **Lecture d'après presse,
+  avis non lu (paywall)** → à re-vérifier avant le 01/09. Si alerte : report au **01/01/2027**.
+- 🔎 **Piste non tranchée** : l'avenant 7 créerait aussi au 01/09/2026 un **bilan fragilité > 70 ans (AMK 10)**,
+  en exercice coordonné (ESP/ESS/CDS/MSP), max 8 séances sans diagnostic préalable. **Absent du tableau
+  SNMKR v19 comme de la base** — donc pas un écart de la base, mais un acte à surveiller.
+
 - Le veilleur ne surveille que le SNMKR. Un avenant paraît d'abord au **JO** — une veille Légifrance
   donnerait de l'avance, mais le tableau SNMKR reste la source de la base.
+
+> **Risque asymétrique, et c'est ce qui dicte le design** : appliquer un palier qui n'entre pas en vigueur
+> → le kiné **surcote → indu** ; l'ignorer à tort → il sous-cote (perte, sans risque légal). Dans un produit
+> dont la promesse est la défendabilité, la faute à ne pas causer est la première. Le moteur et l'app
+> **affichent une réserve** au lieu de changer le tarif en silence.
