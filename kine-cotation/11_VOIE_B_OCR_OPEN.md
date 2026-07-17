@@ -91,6 +91,37 @@ modèle se fait à l'aveugle.
 
 ---
 
+## 4 bis. Premier benchmark — 2026-07-18 (PRÉLIMINAIRE)
+
+Qwen2.5-VL-7B tourne **en local sur la RTX 4070** (12 Go) via Ollama (`qwen2.5vl:7b`,
+endpoint OpenAI-compatible → provider `selfhosted`). Comparé à Claude Sonnet (voie A, cloud) sur
+les **10 ordonnances synthétiques TAPÉES** (`benchmark/synthetiques/`) :
+
+| Champ | Claude Sonnet (A) | Qwen2.5-VL-7B local (B) |
+|---|---|---|
+| nb_seances | 100 % | 100 % |
+| chirurgie | 70 % | 70 % |
+| domicile | 100 % | 90 % |
+| **bilan** | 100 % | **20 %** |
+| acte top-1 | 80 % | 60 % |
+| acte top-3 / top-5 | 90 % | 90 % |
+| alerte DAP | 89 % | 89 % |
+| perf | ~réseau | ~10 s/image (à chaud) |
+
+**Lecture** : la voie B est **techniquement viable** — un modèle open, gratuit, sur la machine
+d'Enzo, tient la comparaison sur séances/chirurgie/domicile/DAP/top-3. Deux faiblesses : **bilan
+20 %** (Qwen interprète mal `mention_bilan` — probablement corrigeable au **prompt**) et top-1 60 %
+(mais top-1 dépend aussi du matcheur d'actes rudimentaire, pas seulement de l'OCR).
+
+⚠️ **Caveats** : (1) **TAPÉ uniquement** — le manuscrit, le vrai juge, n'est pas testé (→ RIMES +
+Malcom) ; (2) **10 échantillons** = bruité, surtout la calibration de confiance (peu fiable pour les
+deux modèles) ; (3) chirurgie 70 % est partagé → à améliorer au prompt.
+
+**Correctif rendu nécessaire ici** : les modèles open rendent un JSON plus lâche (booléens en
+`"oui"/"non"`, entiers en `"50 séances"`, `alertes: ""` au lieu de `[]`) → le schéma Pydantic strict
+rejetait 10/10. `ordonnance_ocr.py` coerce désormais bool/int/list → on benchmarke l'**OCR** à armes
+égales, pas le formatage JSON. (Claude/Mistral, déjà stricts, ne sont pas affectés.)
+
 ## 5. Reste à faire
 - Obtenir l'échantillon (15-20 ordonnances réelles anonymisées, manuscrites ET tapées).
 - Monter une GPU HDS de test + vLLM (quelques heures ; coût GPU à l'heure, pas de contrat annuel pour tester).

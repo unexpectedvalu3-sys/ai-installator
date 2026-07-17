@@ -101,6 +101,23 @@ def encoder_image(path: Path):
     return ("image", MEDIA_TYPES[ext], base64.standard_b64encode(path.read_bytes()).decode())
 
 
+def _to_bool(v):
+    """Coerce un booleen lache -> bool. 'oui'/'vrai'/'true'/1 -> True ; reste -> False."""
+    if isinstance(v, bool):
+        return v
+    return str(v).strip().lower() in ("true", "1", "oui", "vrai", "yes", "y", "o")
+
+
+def _to_int(v):
+    """Coerce un entier lache -> int. '50 seances' -> 50 ; rien de numerique -> 0."""
+    if isinstance(v, bool):
+        return 0
+    if isinstance(v, int):
+        return v
+    m = re.search(r"\d+", str(v if v is not None else ""))
+    return int(m.group()) if m else 0
+
+
 def _extraire_json(texte: str) -> dict:
     """Recupere le 1er objet JSON d'une reponse (tolere les fences ```json)."""
     t = texte.strip()
@@ -126,7 +143,11 @@ def lire_ordonnance(path: Path) -> Ordonnance:
         source=source,
     )
     data = _extraire_json(texte)
-    # Normalisation defensive (le modele peut renvoyer un bool ou null)
+    # Normalisation defensive. INDISPENSABLE pour la voie B : les modeles open
+    # (Qwen2.5-VL, etc.) rendent un JSON plus lache que Claude/Mistral -> booleens
+    # en mots francais ("oui"/"non"), entiers en texte ("50 seances"). Sans coercion,
+    # le schema Pydantic strict rejette TOUT (10/10 erreurs mesurees). On coerce ici
+    # pour benchmarker les modeles a armes egales (fair OCR, pas fair formatage JSON).
     c = data.get("chirurgie")
     if isinstance(c, bool):
         data["chirurgie"] = "oui" if c else "non"
@@ -136,8 +157,13 @@ def lire_ordonnance(path: Path) -> Ordonnance:
     for champ in ("patient_nom", "prescripteur", "date_prescription", "pathologie_texte", "specialite"):
         if data.get(champ) is None:
             data[champ] = ""
-    if data.get("nb_seances_prescrites") in (None, ""):
-        data["nb_seances_prescrites"] = 0
+    for champ in ("domicile", "urgence", "mention_bilan"):
+        if champ in data:
+            data[champ] = _to_bool(data[champ])
+    data["nb_seances_prescrites"] = _to_int(data.get("nb_seances_prescrites"))
+    al = data.get("alertes")
+    if not isinstance(al, list):  # Qwen rend "" au lieu de [] ; d'autres une string
+        data["alertes"] = [al] if isinstance(al, str) and al.strip() else []
     return Ordonnance(**data)
 
 
