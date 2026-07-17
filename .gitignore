@@ -13,3 +13,7 @@ node_modules/
 # Junk
 nouveau*.txt
 yes
+
+# registre de comptes KineCotation (hash — jamais publie)
+kine-cotation/webapp/accounts.json
+accounts.json

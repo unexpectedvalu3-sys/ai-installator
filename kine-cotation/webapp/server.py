@@ -9,7 +9,7 @@ Deux modes d'usage :
   - servi par ce backend : login (auth.py) + OCR (/api/ocr). La cle Mistral vit
     cote serveur, jamais dans le navigateur.
 
-    python set_password.py       # 1x : cree le compte du kine (il tape son mdp)
+    python make_account.py       # 1x par kine : cree son compte (il tape son mdp)
     python server.py             # http://127.0.0.1:8770
 
 Pre-requis : pip install -r ../requirements.txt  (flask, itsdangerous, mistralai...)
@@ -91,7 +91,7 @@ def _garde():
         return None
     if not auth.configured():
         # fail-closed : pas de config -> on ne sert RIEN (jamais l'app en clair)
-        return jsonify(error="auth non configurée — lancer set_password.py"), 503
+        return jsonify(error="auth non configurée — lancer make_account.py"), 503
     token = request.cookies.get(auth.COOKIE_NAME)
     if token and auth.read_session_token(token):
         return None
@@ -173,7 +173,7 @@ def api_ocr():
 
 if __name__ == "__main__":
     if not auth.configured():
-        print("[!] Auth non configurée. Lance d'abord :  python set_password.py")
+        print("[!] Auth non configurée. Lance d'abord :  python make_account.py")
     # PORT injecte par l'hebergeur (Render/Fly/...). En local : 8770.
     port = int(os.environ.get("PORT", "8770"))
     # Local -> 127.0.0.1 (rien n'ecoute vers l'exterieur). Heberge -> 0.0.0.0

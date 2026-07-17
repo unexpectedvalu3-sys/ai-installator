@@ -13,7 +13,7 @@ login gardé, HTML régénérée au build depuis la base NGAP.
 **Toi seul (secrets + compte d'hôte — mes garde-fous m'interdisent de le faire) :**
 1. Créer un service chez un hébergeur et cliquer « déployer ».
 2. Créer la clé Mistral (console fournisseur) et la coller dans les variables d'env de l'hôte.
-3. Fixer le mot de passe de Malcom (via `set_password.py`).
+3. Fixer le mot de passe de chaque kiné (via `make_account.py`).
 
 Je ne peux pas cliquer « déployer » sur un compte que je n'ai pas, ni saisir une clé ou un mot de passe.
 
@@ -21,20 +21,20 @@ Je ne peux pas cliquer « déployer » sur un compte que je n'ai pas, ni saisir 
 
 ## Étapes (≈ 15 min)
 
-### 1. Créer le compte de Malcom (en local, une fois)
+### 1. Créer les comptes (en local — **multi-comptes**, un par kiné)
 ```
 cd kine-cotation/webapp
-python set_password.py
+python make_account.py
    Identifiant : malcom.dorante
-   Mot de passe : ********   (choisis-en un FORT, 10+ car. — outil de santé)
+   Mot de passe : ********   (FORT, 10+ car. — outil de santé)
 ```
-Le script imprime `APP_USER`, `APP_PASSWORD_HASH`, `SECRET_KEY`. Garde-les pour l'étape 3.
-Le mot de passe n'est jamais affiché ni stocké en clair.
+Relance-le pour ajouter d'autres kinés (chacun son mot de passe). Le script écrit
+`accounts.json` (registre, **gitignoré — les hash ne sont jamais publiés**) et imprime
+`KINE_ACCOUNTS` + `SECRET_KEY` à coller à l'étape 3. Le mot de passe n'est jamais affiché.
 
-> Pour que Malcom choisisse **lui-même** son mot de passe : il lance `set_password.py` chez lui
-> et t'envoie seulement les 3 lignes (le hash, pas le mot de passe). Sinon, choisis-le et
-> transmets-le lui par un canal sûr. Auth mono-compte : pas d'écran « changer le mot de passe » —
-> pour en changer, on relance `set_password.py` et on met à jour `APP_PASSWORD_HASH`.
+> Pour que le kiné choisisse **lui-même** son mot de passe : il lance `make_account.py` chez lui et
+> t'envoie seulement le bloc `KINE_ACCOUNTS` (le hash, pas le mot de passe). Pas d'écran « changer le
+> mot de passe » : pour en changer, on relance `make_account.py` (il remplace l'entrée du compte).
 
 ### 2. Choisir un hébergeur (host-neutre — pas Railway, cf. préférence projet)
 Options simples avec HTTPS gratuit : **Render**, **Fly.io**, **Scaleway** (FR/EU — à préférer).
@@ -44,14 +44,16 @@ Options simples avec HTTPS gratuit : **Render**, **Fly.io**, **Scaleway** (FR/EU
 
 ### 3. Variables d'environnement à coller dans le dashboard de l'hôte
 ```
-APP_USER=malcom.dorante
-APP_PASSWORD_HASH=pbkdf2$...      (sortie de set_password.py)
-SECRET_KEY=...                     (sortie de set_password.py — stable, sinon les sessions sautent)
+KINE_ACCOUNTS={"comptes":[{"user":"malcom.dorante","password_hash":"pbkdf2$..."}]}
+SECRET_KEY=...                     (sortie de make_account.py — stable, sinon les sessions sautent)
 MISTRAL_API_KEY=...                (console.mistral.ai — pour l'OCR ; vide = app sans OCR)
 HOST=0.0.0.0
 # NE PAS mettre COOKIE_INSECURE : l'hôte est en HTTPS -> cookie Secure automatiquement.
 ```
-`.env` n'est **jamais** commité ; en hébergement, ces valeurs vivent dans l'hôte, pas dans un fichier.
+Le registre `accounts.json` et `.env` ne sont **jamais** commités ; en hébergement, ces valeurs
+vivent dans l'hôte (env `KINE_ACCOUNTS`), pas dans un fichier du repo. Pour beaucoup de comptes,
+monter un disque et pointer `KINE_ACCOUNTS_FILE` vers un `accounts.json` persistant (édité par
+`make_account.py`) évite de retoucher l'env à chaque ajout.
 
 ### 4. Déployer, puis vérifier
 - `https://<ton-app>/healthz` → `{"status":"ok","auth_configured":true}`

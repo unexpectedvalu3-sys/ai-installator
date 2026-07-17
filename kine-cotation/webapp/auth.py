@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 """Authentification par formulaire + session (cookie signe).
 
-Reutilise le modele EPROUVE du comparateur-courtier (meme famille de code) :
-UN compte, pas de base de donnees, identifiants en variables d'environnement.
+MULTI-COMPTES : les identifiants vivent dans un registre (accounts.py) — plusieurs
+kines, chacun son mot de passe. Ce module ne garde que la crypto commune (hash,
+verif, jeton de session) et la cle de signature :
 
-  APP_USER            identifiant du kine (son email)
-  APP_PASSWORD_HASH   hash PBKDF2 du mot de passe (genere par set_password.py)
   SECRET_KEY          cle aleatoire longue qui signe le cookie de session
 
-Le mot de passe n'est JAMAIS stocke en clair ni connu de l'app : seul son hash
-est en config. set_password.py produit ce hash localement (le kine tape son mot
-de passe lui-meme). Ni Enzo ni l'assistant ne voient le mot de passe.
+Le mot de passe n'est JAMAIS stocke en clair : seul son hash PBKDF2 est au
+registre. make_account.py produit ce hash localement (le kine tape son mot de
+passe lui-meme). Ni Enzo ni l'assistant ne voient le mot de passe.
 
 POURQUOI UN LOGIN SUR UN OUTIL LOCAL-FIRST ?
 La cotation, la DAP, le dossier de preuve et le profil sont 100% locaux (chez le
@@ -30,8 +29,6 @@ import secrets
 
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
-APP_USER = os.environ.get("APP_USER", "")
-APP_PASSWORD_HASH = os.environ.get("APP_PASSWORD_HASH", "")
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
 
 COOKIE_NAME = "kine_session"
@@ -44,13 +41,15 @@ _serializer = URLSafeTimedSerializer(SECRET_KEY or "dev-insecure-key", salt="kin
 
 
 def configured():
-    """True si l'app peut authentifier : identifiant + hash + cle de signature."""
-    return bool(APP_USER and APP_PASSWORD_HASH and SECRET_KEY)
+    """True si l'app peut authentifier : une cle de signature ET au moins un compte
+    dans le registre (accounts.py). Sinon fail-closed (503), l'app ne sert rien."""
+    import accounts
+    return bool(SECRET_KEY and accounts.has_any())
 
 
 def hash_password(password, iterations=200_000):
-    """Produit `pbkdf2$<iters>$<salt_b64>$<hash_b64>` pour APP_PASSWORD_HASH.
-    Appele hors ligne par set_password.py — le mot de passe n'entre jamais ici en prod."""
+    """Produit `pbkdf2$<iters>$<salt_b64>$<hash_b64>` a mettre au registre.
+    Appele hors ligne par make_account.py — le mot de passe n'entre jamais ici en prod."""
     salt = secrets.token_bytes(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
     return "pbkdf2${}${}${}".format(
@@ -71,12 +70,11 @@ def _verify_password(password, stored):
 
 
 def check_credentials(user, password):
-    """Verifie identifiant + mot de passe en temps ~constant."""
-    if not configured():
+    """Verifie (identifiant, mot de passe) contre le registre MULTI-COMPTES."""
+    if not SECRET_KEY:
         return False
-    user_ok = hmac.compare_digest((user or "").strip(), APP_USER)
-    pwd_ok = _verify_password(password or "", APP_PASSWORD_HASH)
-    return user_ok and pwd_ok
+    import accounts
+    return accounts.check(user, password)
 
 
 def make_session_token(user):
