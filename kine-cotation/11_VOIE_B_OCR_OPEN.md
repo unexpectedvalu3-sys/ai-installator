@@ -97,16 +97,23 @@ Qwen2.5-VL-7B tourne **en local sur la RTX 4070** (12 Go) via Ollama (`qwen2.5vl
 endpoint OpenAI-compatible → provider `selfhosted`). Comparé à Claude Sonnet (voie A, cloud) sur
 les **10 ordonnances synthétiques TAPÉES** (`benchmark/synthetiques/`) :
 
-| Champ | Claude Sonnet (A) | Qwen2.5-VL-7B local (B) — **après ajustement** |
-|---|---|---|
-| nb_seances | 100 % | 100 % |
-| chirurgie | 70 % | 70 % |
-| domicile | 100 % | 100 % |
-| bilan | 100 % | **100 %** (était 20 %) |
-| acte top-1 | 80 % | 60 % |
-| acte top-3 / top-5 | 90 % | 90 % |
-| alerte DAP | 89 % | 89 % |
-| perf | ~réseau | ~10 s/image (à chaud) |
+Comparaison **à trois** (10 synthétiques tapées, après ajustement prompt+coercion) :
+
+| Champ | Mistral medium (A, cloud) | Claude Sonnet (A, cloud) | Qwen2.5-VL-7B (B, local) |
+|---|---|---|---|
+| nb_seances | 100 % | 100 % | 100 % |
+| **chirurgie** | **100 %** | 70 % | 70 % |
+| domicile | 100 % | 100 % | 100 % |
+| bilan | 100 % | 100 % | 100 % (était 20 %) |
+| acte top-1 | 80 % | 80 % | 60 % |
+| acte top-3 / top-5 | 90 % | 90 % | 90 % |
+| alerte DAP | 89 % | 89 % | 89 % |
+| perf / coût | API FR/UE | API cloud | **~10 s/img, local, gratuit** |
+
+**Mistral medium gagne** (chirurgie 100 % — seul à ne pas se tromper sur opéré/non). Claude 2e.
+**Qwen local est juste derrière** : à parité sur tout l'extraction sauf `chirurgie` (70 %, partagé
+avec Claude) et top-1 (60 %). Pour un modèle **gratuit sur la RTX 4070**, c'est un excellent signal
+pour la voie B souveraine.
 
 **Lecture** : la voie B est à **quasi-parité** sur le tapé — un modèle open, gratuit, sur la machine
 d'Enzo, égale Claude Sonnet sur **tous les champs d'extraction** (séances, domicile, bilan) sauf

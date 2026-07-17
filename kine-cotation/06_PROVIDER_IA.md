@@ -37,7 +37,9 @@ sont 100 % locaux et déterministes.
   KINE_LLM_PROVIDER=mistral   python run_batch.py ordonnances
   KINE_LLM_PROVIDER=anthropic python run_batch.py ordonnances
   ```
-- **`requirements.txt`** — `mistralai==2.7.0` ajouté.
+- **`requirements.txt`** — ~~`mistralai`~~ **retiré** (2026-07-18) : le SDK s'installe corrompu sur la
+  machine d'Enzo (Defender). Mistral est appelé via son **API OpenAI-compatible en HTTP direct**
+  (`llm._post_openai_compat`, `https://api.mistral.ai/v1`), partagé avec le provider `selfhosted`.
 
 Vérifié : tout compile, la chaîne s'importe, la bascule des deux providers fonctionne, l'erreur
 clé-manquante est propre.
@@ -67,7 +69,9 @@ clé-manquante est propre.
 
 ## 4. Questions techniques ouvertes
 
-1. **`pixtral-large-latest` (câblé) vs `mistral-ocr-latest` / OCR 4.** J'ai câblé le modèle vision
+   *(MàJ 2026-07-18 : défaut Mistral = `mistral-medium-latest` — `pixtral-*` n'existe pas sur le
+   compte testé. Mistral medium a fait chirurgie 100 % au 1er benchmark, cf. `11_VOIE_B_OCR_OPEN.md`.)*
+1. **modèle Mistral chat vs `mistral-ocr-latest` / OCR 4.** J'ai câblé le modèle vision
    en un appel, pour rester **à iso-pipeline avec Claude** (image → JSON structuré) et rendre le
    benchmark comparable. Mais **OCR 4 sort des scores de confiance en ligne** — or le protocole §4
    dit qu'une confiance calibrée « compte presque autant que l'accuracy » (métrique D). Un pipeline

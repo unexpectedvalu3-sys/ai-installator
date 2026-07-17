@@ -2,8 +2,9 @@
 # Testé avec Python 3.12.10 (C:\Users\admin\AppData\Local\Programs\Python\Python312)
 # Install : python -m pip install -r requirements.txt
 
-mistralai==2.7.0      # provider IA par DÉFAUT (éditeur FR, serveurs UE) — prototype/llm.py
-anthropic==0.117.0    # provider alternatif / référence de qualité au benchmark
+# Mistral (provider par DÉFAUT, éditeur FR/UE) : appelé via son API OpenAI-compatible
+# en HTTP direct (urllib) — PAS de SDK mistralai (il s'installe corrompu ici, Defender).
+anthropic==0.117.0    # provider alternatif / référence de qualité au benchmark (SDK)
 pydantic==2.13.4      # structured output de l'OCR
 pillow==12.3.0        # manipulation images ordonnances — benchmark/, prototype/
 flask==3.1.3          # webapp/server.py

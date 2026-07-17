@@ -15,6 +15,10 @@ Choix du provider :
     KINE_LLM_PROVIDER = mistral (defaut) | anthropic
     KINE_LLM_MODELE   = surcharge optionnelle du modele
 
+Providers : mistral (defaut) · anthropic · selfhosted (voie B, endpoint OpenAI-compat).
+Mistral ET selfhosted passent par le meme appel HTTP OpenAI-compatible (urllib, sans
+SDK) : le SDK mistralai s'installe de facon fragile ici (Defender).
+
 Cles (jamais commitees, jamais saisies par l'assistant) :
     MISTRAL_API_KEY      -> https://console.mistral.ai
     ANTHROPIC_API_KEY    -> https://console.anthropic.com
@@ -38,7 +42,7 @@ PROVIDER_DEFAUT = "mistral"
 MODELES_DEFAUT = {
     # Vision + raisonnement en un appel : meme forme que l'appel Claude d'origine
     # (image -> JSON structure), donc comparable a iso-pipeline dans le benchmark.
-    "mistral": "pixtral-large-latest",
+    "mistral": "mistral-medium-latest",   # multimodal ; pixtral-* indispo sur le compte teste
     "anthropic": "claude-opus-4-8",
     # VOIE B (souverain) : modele OCR/vision OPEN auto-heberge, servi via une API
     # OpenAI-compatible (vLLM) sur GPU dans le perimetre HDS. La donnee ne sort pas
@@ -111,90 +115,72 @@ def _appel_anthropic(systeme: str, invite: str, source: tuple, modele: str) -> s
     return next((b.text for b in resp.content if b.type == "text"), "")
 
 
-def _appel_mistral(systeme: str, invite: str, source: tuple, modele: str) -> str:
-    try:
-        from mistralai import Mistral
-    except ImportError as e:
-        raise LLMIndisponible("pip install mistralai") from e
+def _post_openai_compat(base: str, api_key: str, systeme: str, invite: str,
+                        source: tuple, modele: str, json_object: bool = False) -> str:
+    """Appel /chat/completions OpenAI-compatible via urllib (ZERO SDK).
 
-    kind, media_type, data = source
-    if kind == "document":
-        # Le chat vision Mistral attend une image. Un PDF passe par l'endpoint OCR
-        # dedie (client.ocr.process / mistral-ocr-latest) = pipeline en 2 temps,
-        # non implemente ici. Voir 06_PROVIDER_IA.md.
-        raise LLMIndisponible(
-            "PDF non supporte par le provider mistral dans cette version "
-            "(convertir en PNG/JPG, ou utiliser le provider anthropic)."
-        )
-
-    contenu = [
-        {"type": "text", "text": invite},
-        {"type": "image_url", "image_url": f"data:{media_type};base64,{data}"},
-    ]
-    resp = Mistral(api_key=os.environ["MISTRAL_API_KEY"]).chat.complete(
-        model=modele,
-        max_tokens=1500,
-        response_format={"type": "json_object"},  # force un objet JSON valide
-        messages=[
-            {"role": "system", "content": systeme},
-            {"role": "user", "content": contenu},
-        ],
-    )
-    return resp.choices[0].message.content or ""
-
-
-def _appel_selfhosted(systeme: str, invite: str, source: tuple, modele: str) -> str:
-    """Endpoint OpenAI-compatible (vLLM) d'un modele OCR/vision OPEN auto-heberge.
-
-    Meme forme de requete que l'appel Mistral (image data-URL) -> comparable a
-    iso-pipeline dans le benchmark. Sans SDK (urllib) : zero dependance ajoutee, et
-    l'appel reste lisible/auditables. Format image = objet OpenAI ({url:...}), la
-    ou le SDK Mistral prend une chaine.
+    Sert Mistral cloud (api.mistral.ai/v1) ET l'auto-heberge (vLLM) : meme protocole.
+    Choix d'urllib plutot que le SDK mistralai : ce dernier s'installe de facon
+    fragile sur cette machine (Defender corrompt l'extraction du wheel) -> un appel
+    HTTP direct, lisible et auditable, supprime la dependance et le point de casse.
     """
     import json as _json
     import urllib.request
 
-    base = os.environ.get("KINE_LLM_BASE_URL", "").rstrip("/")
-    if not base:
-        raise LLMIndisponible("KINE_LLM_BASE_URL absente (provider selfhosted).")
-
     kind, media_type, data = source
     if kind == "document":
-        raise LLMIndisponible(
-            "PDF non supporte par le provider selfhosted (convertir en PNG/JPG). "
-            "Voir 11_VOIE_B_OCR_OPEN.md."
-        )
+        raise LLMIndisponible("PDF non supporte (convertir en PNG/JPG). Voir 06_PROVIDER_IA.md.")
 
     payload = {
         "model": modele,
         "max_tokens": 1500,
-        "temperature": 0,  # OCR = extraction deterministe, pas de creativite
+        "temperature": 0,  # OCR = extraction deterministe
         "messages": [
             {"role": "system", "content": systeme},
             {"role": "user", "content": [
                 {"type": "text", "text": invite},
-                {"type": "image_url",
-                 "image_url": {"url": f"data:{media_type};base64,{data}"}},
+                {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{data}"}},
             ]},
         ],
     }
+    if json_object:
+        payload["response_format"] = {"type": "json_object"}
     req = urllib.request.Request(
-        base + "/chat/completions",
+        base.rstrip("/") + "/chat/completions",
         data=_json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"},
     )
-    cle = os.environ.get("KINE_LLM_API_KEY")  # optionnelle (auto-heberge = souvent ouvert)
-    if cle:
-        req.add_header("Authorization", f"Bearer {cle}")
+    if api_key:
+        req.add_header("Authorization", f"Bearer {api_key}")
     try:
         with urllib.request.urlopen(req, timeout=180) as r:
             resp = _json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:300]
+        raise LLMIndisponible(f"HTTP {e.code} de {base} : {detail}") from e
     except Exception as e:
-        raise LLMIndisponible(f"Endpoint auto-heberge injoignable ({base}) : {e}") from e
+        raise LLMIndisponible(f"Endpoint injoignable ({base}) : {e}") from e
     try:
         return resp["choices"][0]["message"]["content"] or ""
-    except (KeyError, IndexError, TypeError) as e:
-        raise LLMIndisponible(f"Reponse inattendue de l'endpoint : {str(resp)[:200]}") from e
+    except (KeyError, IndexError, TypeError):
+        raise LLMIndisponible(f"Reponse inattendue : {str(resp)[:200]}")
+
+
+def _appel_mistral(systeme: str, invite: str, source: tuple, modele: str) -> str:
+    """Mistral cloud via son API OpenAI-compatible (plus de SDK mistralai)."""
+    return _post_openai_compat(
+        "https://api.mistral.ai/v1", os.environ.get("MISTRAL_API_KEY", ""),
+        systeme, invite, source, modele, json_object=True)
+
+
+def _appel_selfhosted(systeme: str, invite: str, source: tuple, modele: str) -> str:
+    """Modele OPEN auto-heberge (voie B) via endpoint OpenAI-compatible (vLLM)."""
+    base = os.environ.get("KINE_LLM_BASE_URL", "")
+    if not base:
+        raise LLMIndisponible("KINE_LLM_BASE_URL absente (provider selfhosted).")
+    return _post_openai_compat(
+        base, os.environ.get("KINE_LLM_API_KEY", ""),
+        systeme, invite, source, modele)
 
 
 _APPELS = {"anthropic": _appel_anthropic, "mistral": _appel_mistral,
