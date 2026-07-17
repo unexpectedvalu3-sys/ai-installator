@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-KinéCotation — OCR ordonnance via Claude API (prototype)
+KinéCotation — OCR ordonnance via provider IA abstrait (prototype)
 
 Role STRICT du LLM : PERCEPTION uniquement. Il lit l'ordonnance (photo/scan)
 et en extrait les FAITS CLINIQUES structures. Il ne calcule JAMAIS la cotation
@@ -9,15 +9,23 @@ ni un coefficient : c'est le moteur deterministe (cotation_engine.py + base
 officielle ngap_kine.json) qui fait la cotation. Cette separation est une
 garantie de securite (pas d'hallucination de tarif de facturation sante).
 
-Pipeline : ordonnance (image) -> Claude vision -> extraction structuree
+Pipeline : ordonnance (image) -> vision (provider actif) -> extraction structuree
            -> matching avec le catalogue officiel -> facture pre-remplie a valider.
 
+Le provider est abstrait (llm.py, CLAUDE.md §4.2) : defaut = Mistral (FR/UE) pour
+la souverainete des donnees. Aucun nom de fournisseur ne vit dans ce fichier.
+
+⚠️ RGPD : une ordonnance est une donnee de sante et l'image SORT du poste vers le
+provider. Benchmark = ordonnances ANONYMISEES uniquement (protocole §0.1).
+Production sur donnees reelles = Mistral Enterprise + ZDR + DPA art. 28.
+
 Pre-requis :
-    pip install anthropic pydantic
-    variable d'environnement ANTHROPIC_API_KEY
+    pip install -r requirements.txt
+    MISTRAL_API_KEY (ou KINE_LLM_PROVIDER=anthropic + ANTHROPIC_API_KEY)
 
 Usage :
     python ordonnance_ocr.py chemin/vers/ordonnance.jpg
+    python llm.py                     # verifie provider / modele / cle
 """
 
 import base64
@@ -28,17 +36,16 @@ import sys
 from pathlib import Path
 
 try:
-    import anthropic
     from pydantic import BaseModel, Field
 except ImportError:
-    print("Installer les dependances : pip install anthropic pydantic")
+    print("Installer les dependances : pip install -r requirements.txt")
     sys.exit(1)
 
 import cotation_engine as ce
+import llm  # couche provider abstraite (CLAUDE.md §4.2) — voir 06_PROVIDER_IA.md
 
-# Modele : opus-4-8 (le plus capable) pour la fiabilite de lecture d'ordonnances
-# manuscrites. Alternative cout reduit prevue par la stack maison : claude-sonnet-4-6.
-MODELE = "claude-opus-4-8"
+# Le modele n'est PLUS choisi ici : il depend du provider actif (KINE_LLM_PROVIDER,
+# defaut = mistral pour la souverainete FR/UE). Bascule dans llm.py, nulle part ailleurs.
 
 MEDIA_TYPES = {
     ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -108,28 +115,16 @@ def _extraire_json(texte: str) -> dict:
 
 
 def lire_ordonnance(path: Path) -> Ordonnance:
-    kind, media_type, data = encoder_image(path)
-    client = anthropic.Anthropic()  # lit ANTHROPIC_API_KEY dans l'environnement
-    block_type = "document" if kind == "document" else "image"
-    source_block = {"type": block_type,
-                    "source": {"type": "base64", "media_type": media_type, "data": data}}
+    source = encoder_image(path)  # (kind, media_type, data_b64)
 
     cles = ", ".join(Ordonnance.model_fields)
     instruction = (SYSTEME + "\n\nReponds UNIQUEMENT par un objet JSON valide (aucun texte autour) "
                    f"avec EXACTEMENT ces cles : {cles}.")
-    resp = client.messages.create(
-        model=MODELE,
-        max_tokens=1500,
-        system=instruction,
-        messages=[{
-            "role": "user",
-            "content": [
-                source_block,
-                {"type": "text", "text": "Extrais les faits cliniques. Reponds en JSON."},
-            ],
-        }],
+    texte = llm._call_llm(
+        systeme=instruction,
+        invite="Extrais les faits cliniques. Reponds en JSON.",
+        source=source,
     )
-    texte = next((b.text for b in resp.content if b.type == "text"), "")
     data = _extraire_json(texte)
     # Normalisation defensive (le modele peut renvoyer un bool ou null)
     c = data.get("chirurgie")
@@ -213,8 +208,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage : python ordonnance_ocr.py chemin/vers/ordonnance.(jpg|png|pdf)")
         sys.exit(1)
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("Definir ANTHROPIC_API_KEY dans l'environnement.")
+    try:
+        llm.verifier_cle()
+    except llm.LLMIndisponible as e:
+        print(f"[!] {e}")
         sys.exit(1)
 
     chemin = Path(sys.argv[1])

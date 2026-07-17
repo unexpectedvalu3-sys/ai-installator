@@ -10,7 +10,14 @@ Lance l'OCR sur toutes les ordonnances d'un dossier et produit :
 
 Usage :
     python run_batch.py <dossier_images>
-    (ANTHROPIC_API_KEY doit etre dans l'environnement)
+
+Provider : herite de prototype/llm.py (defaut Mistral FR/UE). La cle du provider
+actif doit etre dans l'environnement — `python prototype/llm.py` pour verifier.
+Comparer 2 providers a iso-pipeline :
+    KINE_LLM_PROVIDER=mistral   python run_batch.py ordonnances
+    KINE_LLM_PROVIDER=anthropic python run_batch.py ordonnances
+
+⚠️ Ordonnances ANONYMISEES uniquement (cf. 00_PROTOCOLE_BENCHMARK_OCR.md §0).
 """
 
 import csv
