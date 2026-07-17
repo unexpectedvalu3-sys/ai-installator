@@ -132,7 +132,7 @@ Le FAMI (~41 €/mois d'aide) couvre quasiment l'abonnement de base VEGA → **l
 1. **Repositionner sur la preuve, pas la décision.** Le simulateur est commodité gratuite ; le dossier de défense ne l'est pas. → **fait, voir `05_REPOSITIONNEMENT_PREUVE.md`**
 2. ~~Vérifier `ngap_kine.json` contre l'avenant 8~~ → **fait le 17/07/2026. 3 lignes corrigées, KB v1.1 recalée sur le tableau SNMKR v19.**
 3. **Arbitrer la contradiction avenant 7** (2024 vs 2026, 80 vs 85 actes) sur Légifrance/ameli en source primaire. **Toujours ouvert** — lecture probable : la *nomenclature* est passée en 2024, les *revalorisations* ont été reportées à 2026. Sans impact sur la KB (déjà en nouvelle nomenclature), mais à savoir avant de parler à un kiné.
-4. **Confirmer l'échéance NMI 10,01 → 11,01 au 01/09** (année à valider) — dans 6 semaines, encodée en attente dans la KB (`_a_partir_du`). **Le moteur ne gère pas encore les cotations datées** → à implémenter avant le 01/09.
+4. **Confirmer l'échéance NMI 10,01 → 11,01 au 01/09** (année à valider) — dans 6 semaines, encodée en attente dans la KB (`_a_partir_du`). → **fait (base v1.3)** : `_paliers` + résolution à la date de la séance, moteur Python et app en parité. Reste à confirmer l'**année** du « 01/09 » (le PDF ne donne pas de millésime).
 5. **La session kiné devient prioritaire n°1** : c'est la seule source possible du chiffre de sous-cotation, et sans lui il n'y a pas d'argument de vente.
 6. **Rééduca (17-19/09/2026)** est la fenêtre GTM courte. À décider vite si on y va.
 7. **Ne pas citer** le « 27 M€ de fraude kiné », le « 82,87 % de télétransmission » (2017), ni les « AMS 7,5 → 8,1 » tant que non re-sourcés.

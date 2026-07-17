@@ -90,7 +90,18 @@ J'ai implémenté un contrôle « il existe un acte mieux coté dans cette régi
 la cotation n'est pas renseigné. Vérifié : 14 actes non filtrés → **4** une fois les 2 critères
 répondus. C'est **là**, en amont, que se joue la sous-cotation.
 
-### 3.6 Détails
+### 3.6 La date de la séance pilote le barème
+Ajoutée en tête du parcours. **Ce n'est pas la date du jour** : une séance du 31/08 facturée le 05/09
+se cote au barème du 31/08, et la justification doit attester **ce** barème-là. Changer la date
+**recote tout le panier** (`recoter()`) — sinon une ligne ajoutée avant correction resterait figée au
+mauvais barème. Le champ est resynchronisé à chaque appel : une date affichée en désaccord avec le
+barème appliqué serait précisément l'incohérence silencieuse qui produit une preuve fausse
+*(bug attrapé au test — la désynchronisation était réelle)*.
+`min` = `applicable_depuis` ; une séance antérieure affiche un **refus de coter** au lieu d'un tarif.
+Les paliers à venir ne sont annoncés que **pour la région affichée** (annoncer les 5 NMI à un kiné du
+rachis, c'est du bruit).
+
+### 3.7 Détails
 - États vides utiles (`01 — Choisis une région…`) plutôt que du blanc.
 - Copie **non directionnelle** (« Choisis une région, puis l'acte réalisé » et non « à gauche » :
   en mobile l'assistant est au-dessus).

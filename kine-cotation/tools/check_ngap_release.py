@@ -113,18 +113,17 @@ def triplets_du_pdf(url: str):
 def triplets_de_la_base(kb):
     """Rend {(code, coef): tarif} de la base, cotations FUTURES incluses.
 
-    Les cotations datees (_a_partir_du/_futur, ex. les 5 NMI qui prennent +1 point
-    au 01/09) figurent dans le PDF publie. Sans les inclure ici, le veilleur les
-    signalerait comme « absentes de la base » a chaque passage : une fausse alarme
-    permanente, qui apprend a ignorer l'outil.
+    Les cotations datees (_paliers, ex. les 5 NMI qui prennent +1 point au 01/09)
+    figurent dans le PDF publie. Sans les inclure ici, le veilleur les signalerait
+    comme « absentes de la base » a chaque passage : une fausse alarme permanente,
+    qui apprend a ignorer l'outil.
     """
     out = {}
     for section in ("actes", "bilans", "supplements"):
         for a in kb.get(section, []):
             out[(a["code"], float(a["coefficient"]))] = float(a["tarif_metropole"])
-            f = a.get("_futur")
-            if f:
-                out[(a["code"], float(f["coefficient"]))] = float(f["tarif_metropole"])
+            for p in a.get("_paliers", []):
+                out[(a["code"], float(p["coefficient"]))] = float(p["tarif_metropole"])
     return out
 
 

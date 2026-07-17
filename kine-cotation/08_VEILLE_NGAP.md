@@ -67,8 +67,13 @@ la main du matin (v1.1) avait manqués** :
 - **Diffuser au kiné** : la release GitHub existe, mais l'app ne va pas encore la chercher.
   Rebrancher le mécanisme déjà éprouvé du comparateur (GitHub Releases + cache local + repli
   embarqué) — cf. [[comparateur-courtier-app]].
-- **Le moteur ne gère pas les cotations datées** — les 5 `_futur` sont encodées mais dormantes.
-  **À faire avant le 01/09** (dans 6 semaines), sinon la base sera fausse sur 5 actes neuro.
-- **Confirmer l'année du « 01/09 »** en source primaire (le PDF dit « 01/09 » sans millésime).
+- ~~Le moteur ne gère pas les cotations datées~~ → **fait (base v1.3)**. `_futur` (une marche)
+  remplacé par `_paliers` (liste). Le moteur Python et l'app résolvent le palier **à la date de la
+  séance**, avec parité vérifiée sur 25 combinaisons. `_meta.applicable_depuis` ajouté : la base
+  n'ayant pas d'historique avant le 28/05/2026, coter une séance antérieure est **refusé** plutôt
+  que de rendre un barème faux que la justification attesterait.
+- ⚠️ **Confirmer l'année du « 01/09 »** en source primaire — le PDF dit « 01/09 » **sans millésime**,
+  et l'encodage suppose 2026. Si l'hypothèse est fausse, 5 actes neuro basculeront au mauvais moment.
+  C'est le dernier point non vérifié de la chaîne.
 - Le veilleur ne surveille que le SNMKR. Un avenant paraît d'abord au **JO** — une veille Légifrance
   donnerait de l'avance, mais le tableau SNMKR reste la source de la base.

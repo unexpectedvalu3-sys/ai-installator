@@ -124,6 +124,12 @@ main{max-width:1140px;margin:var(--sp-5) auto var(--sp-7);padding:0 var(--sp-4);
 
 /* ---------- etapes ---------- */
 .step{margin-bottom:var(--sp-4)}
+/* date de seance : en tete, compacte — elle pilote le bareme mais ne doit pas
+   voler la vedette au parcours de cotation */
+.dateline{display:flex;align-items:center;gap:var(--sp-3);padding-bottom:var(--sp-4);
+  border-bottom:1px solid var(--line)}
+.dateline label{margin:0;font-weight:600;color:var(--ink);white-space:nowrap}
+.dateline input{width:auto;font-family:var(--mono);font-size:13px}
 .lbl{display:flex;align-items:center;gap:var(--sp-2);font-size:13px;font-weight:600;margin-bottom:var(--sp-2)}
 .idx{font-family:var(--mono);font-size:10px;color:var(--accent);border:1px solid var(--accent-line);
   border-radius:4px;padding:1px 5px;font-weight:500}
@@ -264,6 +270,13 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
   <div class="card builder">
     <h2>Construire la cotation</h2>
 
+    <!-- La date de la SEANCE pilote le bareme (pas la date du jour) : une seance du
+         31/08 facturee le 05/09 se cote au bareme du 31/08. Elle est donc en tete. -->
+    <div class="step dateline">
+      <label for="w_date">Date de la séance</label>
+      <input id="w_date" type="date" onchange="setDateSeance(this.value)">
+    </div>
+
     <div class="step">
       <div class="lbl"><span class="idx">00</span> Ordonnance (optionnel)</div>
       <div class="file"><input type="file" accept="image/*,.pdf" onchange="uploadOrdo(this)"></div>
@@ -349,6 +362,24 @@ let panier = [];      // {code,coef,tarif,libelle,article,referentiel,chirurgie,
 const lettre = ()=> profil.drom ? KB._meta.valeur_lettre_cle_eur.drom : KB._meta.valeur_lettre_cle_eur.metropole;
 const tarif = c => Math.round(c*lettre()*100)/100;
 const eur = n => n.toFixed(2).replace('.',',')+' €';
+
+// ---- cotations datees (miroir de cotation_engine.acte_a_la_date) ----
+// La NGAP bouge par PALIERS (01/01/2026, 28/05/2026, 01/09/2026). La date qui fait
+// foi est celle DE LA SEANCE, jamais « aujourd'hui » : une seance du 31/08 facturee
+// le 05/09 se cote au bareme du 31/08 — et la justification doit attester CE bareme.
+const isoAujourdhui = ()=>{const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);};
+let dateSeance = isoAujourdhui();
+
+function acteALaDate(a, d){
+  let r={coefficient:a.coefficient, tarif_metropole:a.tarif_metropole, palier:null};
+  (a._paliers||[]).slice().sort((x,y)=>x.a_partir_du<y.a_partir_du?-1:1)
+    .forEach(p=>{ if(d>=p.a_partir_du) r={coefficient:p.coefficient, tarif_metropole:p.tarif_metropole, palier:p.a_partir_du}; });
+  return r;
+}
+const frDate = d => d.split('-').reverse().join('/');
+// La base n'a PAS d'historique avant applicable_depuis : coter avant, ce serait
+// produire un bareme faux QUE LA JUSTIFICATION ATTESTERAIT. On refuse.
+const dateHorsPerimetre = d => !!(KB._meta.applicable_depuis && d < KB._meta.applicable_depuis);
 const actesRegion = r => KB.actes.filter(a=>a.region===r);
 const trouverRef = a => KB.referentiels.find(r=>a.libelle.toLowerCase().includes(r.match_libelle));
 // ATTENTION — deux quantites DIFFERENTES, a ne jamais confondre :
@@ -439,19 +470,49 @@ function renderActes(){
   if(!document.getElementById('w_chir_wrap').classList.contains('hidden')&&c) actes=actes.filter(a=>a.chirurgie===(c==='oui'));
   if(!document.getElementById('w_ref_wrap').classList.contains('hidden')&&rf) actes=actes.filter(a=>a.referentiel===(rf==='oui'));
   box.innerHTML = actes.map(a=>{
-    const i=KB.actes.indexOf(a);
+    const i=KB.actes.indexOf(a), v=acteALaDate(a,dateSeance);
     return `<button type="button" class="acte" onclick="addActe(${i})">
-      <span><b class="c">${a.code} ${a.coefficient}</b> <span class="lib">${a.libelle}</span></span>
-      <span class="t">${eur(tarif(a.coefficient))}</span></button>`;
+      <span><b class="c">${a.code} ${v.coefficient}</b> <span class="lib">${a.libelle}</span></span>
+      <span class="t">${eur(tarif(v.coefficient))}</span></button>`;
   }).join('') || '<div class="empty">Aucun acte avec ces critères — ajuste ci-dessus.</div>';
-  // le rappel des criteres vit ICI, en amont du choix — pas dans la feuille en aval
-  document.getElementById('criteres').innerHTML =
-    controleCriteres().map(m=>`<div class="alert info">${m}</div>`).join('');
+  // Rappels : criteres manquants, + paliers a venir SUR CETTE REGION uniquement
+  // (annoncer les 5 NMI a un kine du rachis, c'est du bruit).
+  let av = [];
+  actes.forEach(a=>(a._paliers||[]).forEach(p=>{ if(p.a_partir_du>dateSeance)
+    av.push(`<b>${a.code} ${a.coefficient} → ${p.coefficient}</b> au ${frDate(p.a_partir_du)} (${a.libelle})`); }));
+  const rappels = controleCriteres().map(m=>`<div class="alert info">${m}</div>`);
+  if(av.length) rappels.push(`<div class="alert info noprint"><b>Barème à venir</b> — ${av.length} acte(s) `
+    +`de cette région changent bientôt :<br>${av.join('<br>')}. Les séances d'ici là gardent le barème actuel.</div>`);
+  document.getElementById('criteres').innerHTML = rappels.join('');
 }
 function addActe(i){
-  const a=KB.actes[i];
-  panier.push({code:a.code,coef:a.coefficient,tarif:tarif(a.coefficient),libelle:a.libelle,article:a.article,referentiel:a.referentiel,chirurgie:a.chirurgie,seance:null,region:a.region});
+  const a=KB.actes[i], v=acteALaDate(a,dateSeance);
+  // `src` = index dans KB.actes -> permet de RECOTER la ligne si la date change
+  panier.push({src:i,code:a.code,coef:v.coefficient,tarif:tarif(v.coefficient),palier:v.palier,
+    libelle:a.libelle,article:a.article,referentiel:a.referentiel,chirurgie:a.chirurgie,seance:null,region:a.region});
   render();
+}
+
+// Recote tout le panier au bareme de la date courante. Sans ca, une ligne ajoutee
+// avant de corriger la date resterait figee au mauvais bareme — et la justification
+// l'attesterait.
+function recoter(){
+  panier.forEach(l=>{
+    if(l.src==null) return;                       // bilans/supplements : pas de paliers
+    const v=acteALaDate(KB.actes[l.src], dateSeance);
+    l.coef=v.coefficient; l.tarif=tarif(v.coefficient); l.palier=v.palier;
+  });
+}
+
+function setDateSeance(v){
+  dateSeance = v || isoAujourdhui();
+  // Le champ est resynchronise systematiquement : un appel non issu du champ
+  // (reset, pre-remplissage OCR, futur code) laisserait sinon la date affichee en
+  // desaccord avec le bareme applique -> une preuve qui atteste autre chose que ce
+  // qu'elle affiche. C'est exactement l'incoherence silencieuse a proscrire ici.
+  const c=document.getElementById('w_date');
+  if(c && c.value!==dateSeance) c.value=dateSeance;
+  recoter(); renderActes(); render();
 }
 function setSeance(idx,val){
   const n=String(val).trim();
@@ -469,7 +530,7 @@ function openPicker(kind){
 function closePicker(){document.getElementById('picker').innerHTML='';}
 function pickItem(kind,i){
   const x=(kind==='bilan'?KB.bilans:KB.supplements)[i];
-  panier.push({code:x.code,coef:x.coefficient,tarif:tarif(x.coefficient),libelle:x.libelle,article:'—',referentiel:false,chirurgie:false,seance:null,region:null});
+  panier.push({src:null,code:x.code,coef:x.coefficient,tarif:tarif(x.coefficient),palier:null,libelle:x.libelle,article:'—',referentiel:false,chirurgie:false,seance:null,region:null});
   closePicker(); render();
 }
 function onDom(){document.getElementById('w_dom_wrap').classList.toggle('hidden',!document.getElementById('w_dom').checked);render();}
@@ -519,10 +580,19 @@ function render(){
   }
   const allLignes = dep?panier.concat([dep]):panier;
   const total=Math.round(allLignes.reduce((s,l)=>s+l.tarif,0)*100)/100;
-  const today=new Date().toLocaleDateString('fr-FR');
+  const today=frDate(dateSeance);
   const alertes=[];
   panier.forEach(l=>{const ref=trouverRef(l); if(ref) alertes.push(alerteDap(ref,(l.seance==null)?null:l.seance,l.prescrites));});
 
+  // Hors perimetre : on refuse de coter plutot que de produire une preuve fausse.
+  if(dateHorsPerimetre(dateSeance)){
+    document.getElementById('feuille').innerHTML=
+      `<div class="alert danger"><b>Séance du ${frDate(dateSeance)} — cotation impossible</b><br>`
+      +`La base ne couvre les tarifs qu'à partir du <span class="num">${frDate(KB._meta.applicable_depuis)}</span> `
+      +`(${KB._meta.source}). Coter cette séance donnerait un barème faux, et la justification l'attesterait. `
+      +`Se référer au tableau SNMKR en vigueur à cette date.</div>`;
+    return;
+  }
   if(!panier.length && !dep){
     document.getElementById('feuille').innerHTML=
       // pas de « à gauche » : en mobile l'assistant est au-dessus (une colonne)
@@ -531,7 +601,8 @@ function render(){
   }
 
   let h=`<div class="fh"><div>${enteteHTML()}</div>
-    <div style="text-align:right"><div class="n">FEUILLE DE SOINS</div><div class="muted">Récapitulatif de cotation</div><div class="muted num">${today}</div></div></div>`;
+    <div style="text-align:right"><div class="n">FEUILLE DE SOINS</div><div class="muted">Récapitulatif de cotation</div>
+    <div class="muted num">séance du ${today}</div></div></div>`;
   // les alertes DAP sont le coeur anti-indu : en HAUT, pas en pied de page
   alertes.filter(a=>a.lvl!=='info').forEach(a=>h+=`<div class="alert ${a.lvl}">${a.msg}</div>`);
   h+=`<table class="ftab"><thead><tr><th>Code</th><th>Coef</th><th>Acte</th><th class="r">Tarif</th><th class="noprint"></th></tr></thead><tbody>`;
@@ -549,10 +620,11 @@ function render(){
   // JUSTIFICATION = le produit. Elle epingle la VERSION DU BAREME : sans ca, une preuve
   // ne vaut rien (le bareme a change 3 fois en 8 mois). Cf. 05_REPOSITIONNEMENT_PREUVE.md.
   h+=`<div class="justif"><b>Justification (à conserver — anti-indu) :</b><br>`+
-     panier.map(l=>`• ${l.code} ${l.coef} (art. ${l.article}) : ${l.libelle}${l.seance!=null?(' — séance n°'+l.seance):''}.`).join('<br>')+
+     panier.map(l=>`• ${l.code} ${l.coef} (art. ${l.article})${l.palier?(' [palier du '+frDate(l.palier)+']'):''} : `
+       +`${l.libelle}${l.seance!=null?(' — séance n°'+l.seance):''}.`).join('<br>')+
      `<br>Pièces : ordonnance + BDK. Vérifier la cohérence soins ↔ prescription.
       <div class="src">Barème appliqué : ${KB._meta.source} · base v${KB._meta.version}
-      · lettre-clé ${eur(lettre())} · établi le ${today}</div>
+      · lettre-clé ${eur(lettre())} · <b>barème en vigueur à la date de la séance (${today})</b></div>
       <i>Aide à la décision — proposition de cotation non télétransmise. Le praticien valide et reste responsable.</i></div>`;
   document.getElementById('feuille').innerHTML=h;
 }
@@ -591,11 +663,12 @@ function renderOcr(data){
   if(e.domicile){ const d=document.getElementById('w_dom'); d.checked=true; onDom(); }
 }
 function addActeFromOcr(i, prescrites){
-  const a=KB.actes[i];
+  const a=KB.actes[i], v=acteALaDate(a,dateSeance);
   // `prescrites` va dans prescrites, PAS dans seance (cf. alerteDap). Le n° de la
   // seance en cours n'est PAS sur l'ordonnance : seul le kine le connait -> il reste
   // null, et le champ « Séance n° » attend sa saisie.
-  panier.push({code:a.code,coef:a.coefficient,tarif:tarif(a.coefficient),libelle:a.libelle,article:a.article,
+  panier.push({src:i,code:a.code,coef:v.coefficient,tarif:tarif(v.coefficient),palier:v.palier,
+    libelle:a.libelle,article:a.article,
     referentiel:a.referentiel,chirurgie:a.chirurgie,seance:null,
     prescrites:(prescrites===null||prescrites===undefined||prescrites===0)?null:prescrites,region:a.region});
   render();
@@ -612,6 +685,8 @@ document.querySelectorAll('.seg').forEach(seg=>{
 });
 document.getElementById('bareme').textContent =
   'barème v'+KB._meta.version+' · lettre-clé '+eur(lettre());
+const _wd=document.getElementById('w_date');
+_wd.value=dateSeance; _wd.min=KB._meta.applicable_depuis||'';
 fillRegions(); renderActes(); render();
 </script>
 </body>
