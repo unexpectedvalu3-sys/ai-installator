@@ -40,11 +40,19 @@ MODELES_DEFAUT = {
     # (image -> JSON structure), donc comparable a iso-pipeline dans le benchmark.
     "mistral": "pixtral-large-latest",
     "anthropic": "claude-opus-4-8",
+    # VOIE B (souverain) : modele OCR/vision OPEN auto-heberge, servi via une API
+    # OpenAI-compatible (vLLM) sur GPU dans le perimetre HDS. La donnee ne sort pas
+    # de notre infra. Defaut = Qwen2.5-VL-7B (Apache 2.0, manuscrit-capable). Voir
+    # 11_VOIE_B_OCR_OPEN.md. Modele et endpoint surchargeables par env.
+    "selfhosted": "Qwen/Qwen2.5-VL-7B-Instruct",
 }
 
+# Ce que verifier_cle() controle pour chaque provider (cle API, ou endpoint pour
+# l'auto-heberge qui peut ne PAS exiger de cle).
 CLES_ENV = {
     "mistral": "MISTRAL_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
+    "selfhosted": "KINE_LLM_BASE_URL",
 }
 
 
@@ -70,6 +78,13 @@ def verifier_cle(provider: str = None) -> None:
     provider = provider or provider_actif()
     var = CLES_ENV[provider]
     if not os.environ.get(var):
+        if provider == "selfhosted":
+            raise LLMIndisponible(
+                "KINE_LLM_BASE_URL absente (provider selfhosted).\n"
+                "  -> pointer vers l'endpoint OpenAI-compatible du modele auto-heberge, ex :\n"
+                "     set KINE_LLM_BASE_URL=http://<gpu-hds>:8000/v1\n"
+                "  (cle optionnelle : KINE_LLM_API_KEY ; modele : KINE_LLM_MODELE)"
+            )
         raise LLMIndisponible(
             f"{var} absente de l'environnement (provider actif : {provider}).\n"
             f"  -> creer la cle sur la console du fournisseur, puis :  set {var}=..."
@@ -128,7 +143,62 @@ def _appel_mistral(systeme: str, invite: str, source: tuple, modele: str) -> str
     return resp.choices[0].message.content or ""
 
 
-_APPELS = {"anthropic": _appel_anthropic, "mistral": _appel_mistral}
+def _appel_selfhosted(systeme: str, invite: str, source: tuple, modele: str) -> str:
+    """Endpoint OpenAI-compatible (vLLM) d'un modele OCR/vision OPEN auto-heberge.
+
+    Meme forme de requete que l'appel Mistral (image data-URL) -> comparable a
+    iso-pipeline dans le benchmark. Sans SDK (urllib) : zero dependance ajoutee, et
+    l'appel reste lisible/auditables. Format image = objet OpenAI ({url:...}), la
+    ou le SDK Mistral prend une chaine.
+    """
+    import json as _json
+    import urllib.request
+
+    base = os.environ.get("KINE_LLM_BASE_URL", "").rstrip("/")
+    if not base:
+        raise LLMIndisponible("KINE_LLM_BASE_URL absente (provider selfhosted).")
+
+    kind, media_type, data = source
+    if kind == "document":
+        raise LLMIndisponible(
+            "PDF non supporte par le provider selfhosted (convertir en PNG/JPG). "
+            "Voir 11_VOIE_B_OCR_OPEN.md."
+        )
+
+    payload = {
+        "model": modele,
+        "max_tokens": 1500,
+        "temperature": 0,  # OCR = extraction deterministe, pas de creativite
+        "messages": [
+            {"role": "system", "content": systeme},
+            {"role": "user", "content": [
+                {"type": "text", "text": invite},
+                {"type": "image_url",
+                 "image_url": {"url": f"data:{media_type};base64,{data}"}},
+            ]},
+        ],
+    }
+    req = urllib.request.Request(
+        base + "/chat/completions",
+        data=_json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    cle = os.environ.get("KINE_LLM_API_KEY")  # optionnelle (auto-heberge = souvent ouvert)
+    if cle:
+        req.add_header("Authorization", f"Bearer {cle}")
+    try:
+        with urllib.request.urlopen(req, timeout=180) as r:
+            resp = _json.loads(r.read().decode("utf-8"))
+    except Exception as e:
+        raise LLMIndisponible(f"Endpoint auto-heberge injoignable ({base}) : {e}") from e
+    try:
+        return resp["choices"][0]["message"]["content"] or ""
+    except (KeyError, IndexError, TypeError) as e:
+        raise LLMIndisponible(f"Reponse inattendue de l'endpoint : {str(resp)[:200]}") from e
+
+
+_APPELS = {"anthropic": _appel_anthropic, "mistral": _appel_mistral,
+           "selfhosted": _appel_selfhosted}
 
 
 def _call_llm(systeme: str, invite: str, source: tuple,
