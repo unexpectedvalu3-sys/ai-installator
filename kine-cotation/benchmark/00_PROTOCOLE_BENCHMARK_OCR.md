@@ -35,7 +35,40 @@ Pour ce benchmark :
 
 ---
 
-## 1. Échantillon
+## 0 bis. Sources de données de test (peut-on trouver des banques en ligne ?)
+
+Un benchmark teste **deux axes distincts** — et une banque publique n'en couvre qu'un :
+- **Axe 1 — lire le manuscrit FR** : le modèle déchiffre-t-il l'écriture cursive française ?
+- **Axe 2 — extraction métier kiné** : zone / chirurgie / séances / pathologie + la cotation + la
+  DAP qui en découlent. **Aucune banque publique ne couvre l'axe 2** (structure NGAP kiné FR).
+
+| Source | Ce qu'elle teste | Licence / accès | Verdict |
+|---|---|---|---|
+| **Synthétique** (`prototype/make_test_ordonnance.py`) | Axe 2 **entier** + axe 1 sur le **tapé** + le prompt (JSON) | fictif, généré, **vérité terrain gratuite** | ✅ **à utiliser en 1er** (aucune donnée patient) |
+| **RIMES** (Teklia/RIMES-2011-line, HF) | Axe 1 : **manuscrit FR** (courriers, pas ordonnances) | MIT, recherche | ✅ **1er filtre manuscrit** des modèles candidats |
+| Kaggle « Doctor's Handwritten Prescription BD » (4680 img) | Axe 1 manuscrit médical, **non-FR**, noms de médicaments | ouvert | 🟠 lecture brute seulement (ni FR, ni kiné) |
+| Kaggle « Doctor Handwriting Recognition » (Pakistan, 90 img) · HF avi-kai (MIT, mots) | Axe 1, mots isolés, non-FR | ouvert / MIT | 🟠 idem |
+| **Ordonnances kiné FR (images)** | Axes 1+2 réels | **n'existe pas** en public | ❌ → vraies ordonnances anonymisées de Malcom |
+
+> ⚠️ **Ligne rouge** : n'utiliser QUE des jeux de recherche sous licence. **Ne jamais scraper** de
+> vraies ordonnances trouvées en ligne — ce sont des données de santé, même « publiques ».
+
+**Séquence recommandée** : (1) **synthétique** maintenant → valide la chaîne extraction+cotation+DAP
+et élimine les modèles au prompt fragile ; (2) **RIMES** → filtre l'aptitude au manuscrit FR des 3
+candidats voie B (`11_VOIE_B_OCR_OPEN.md`) avant de payer du GPU ; (3) **vraies ordonnances
+anonymisées de Malcom** → seul go/no-go réel (axes 1+2, écriture + métier).
+
+### Jeu synthétique fourni
+`python prototype/make_test_ordonnance.py` → **10 ordonnances** couvrant l'espace de décision (genou
+PTG opéré, LCA, coiffe opérée, entorse, lombalgie, cervicalgie, hémiplégie, fracture avant-bras,
+respiratoire, une **incomplète**) dans `benchmark/synthetiques/`, **avec `verite_terrain.csv`
+auto-résolu contre la base** (acte_id + seuil DAP). Cohérence vérifiée (bon acte selon chirurgie,
+bon seuil). **Limite assumée** : ce sont des ordonnances **tapées** (corps pseudo-manuscrit), pas de
+la vraie écriture → l'axe 1 manuscrit reste pour RIMES + Malcom.
+
+---
+
+## 1. Échantillon (vraies ordonnances)
 
 - **15 à 20 ordonnances réelles** fournies par le kiné design partner.
 - **Variées** : manuscrites ET tapées, plusieurs pathologies/zones (rachis, genou, épaule,
