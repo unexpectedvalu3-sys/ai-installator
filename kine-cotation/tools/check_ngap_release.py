@@ -36,6 +36,7 @@ Ensuite seulement, le build + la release de l'app peuvent etre automatiques.
 
 import argparse
 import json
+from datetime import date, datetime
 import re
 import shutil
 import subprocess
@@ -56,6 +57,15 @@ LIEN_PDF = re.compile(r"https?://[^\s\"']*tableau-ngap[_-]v(\d+)([a-z]?)\.pdf", 
 
 def _get(url: str) -> bytes:
     return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=45).read()
+
+
+def _iso_aujourdhui() -> str:
+    return date.today().isoformat()
+
+
+def _jours_avant(cible: str, depuis: str) -> int:
+    f = "%Y-%m-%d"
+    return (datetime.strptime(cible, f) - datetime.strptime(depuis, f)).days
 
 
 def version_tuple(num: str, suffixe: str):
@@ -145,6 +155,7 @@ def main():
     drift = v_base != v_pub
 
     rapport = {"version_base": v_base, "version_publiee": v_pub, "url": url,
+               "a_surveiller": kb["_meta"].get("_a_surveiller", []),
                "base_version_interne": kb["_meta"]["version"], "drift": drift,
                "nouveaux": [], "disparus": [], "modifies": []}
 
@@ -164,7 +175,21 @@ def main():
 
     print(f"\n  Base locale   : {v_base}  (ngap_kine.json v{kb['_meta']['version']})")
     print(f"  Publie SNMKR  : {v_pub}")
-    print(f"  {url}\n")
+    print(f"  {url}")
+
+    # Rappel des echeances connues mais PAS ENCORE dans la base (elles ne sont pas
+    # dans le tableau SNMKR, notre source). Sans ce rappel a chaque passage, la note
+    # dort dans un JSON que personne ne relit et l'echeance passe inapercue.
+    a_voir = kb["_meta"].get("_a_surveiller", [])
+    if a_voir:
+        aujourd = _iso_aujourdhui()
+        print("\n  A SURVEILLER (connu, pas encore dans la base — attendu du SNMKR) :")
+        for x in sorted(a_voir, key=lambda x: x["date_prevue"]):
+            jours = _jours_avant(x["date_prevue"], aujourd)
+            marque = "  <-- ECHU" if jours < 0 else (f"  <-- dans {jours} j" if jours <= 60 else "")
+            print(f"    {x['date_prevue']}  {x['quoi'][:66]}{marque}")
+
+    print()
     if not drift:
         print("  A JOUR — rien a faire.\n")
         return 0

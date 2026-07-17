@@ -84,9 +84,34 @@ la main du matin (v1.1) avait manqués** :
   avis 2026-2 (25/06) « n'écarte pas le risque » et appelle à annuler les mises en réserve — formulation
   de **vigilance**, pas le constat de « risque sérieux » qui déclenche l'alerte. **Lecture d'après presse,
   avis non lu (paywall)** → à re-vérifier avant le 01/09. Si alerte : report au **01/01/2027**.
-- 🔎 **Piste non tranchée** : l'avenant 7 créerait aussi au 01/09/2026 un **bilan fragilité > 70 ans (AMK 10)**,
-  en exercice coordonné (ESP/ESS/CDS/MSP), max 8 séances sans diagnostic préalable. **Absent du tableau
-  SNMKR v19 comme de la base** — donc pas un écart de la base, mais un acte à surveiller.
+### Échéances connues, volontairement PAS dans la base (`_meta._a_surveiller`, v1.5)
+
+Le veilleur les rappelle **à chaque passage** avec le décompte des jours — sinon une note dort dans un
+JSON que personne ne relit et l'échéance passe.
+
+**1. Bilan de repérage de la fragilité — AMK 10 (22,10 €), au 01/09/2026** ✅ *vérifié au livret officiel
+de l'Ordre MK (p.6)* : « *personnes âgées de **70 ans ou plus*** […] nouvel acte au **chapitre I des actes
+de diagnostic** du titre XIV […] **coté AMK 10**. Cet acte est réalisé **sur prescription médicale ou à
+l'initiative du masseur-kinésithérapeute** […]. Le **compte rendu** doit être adressé au **médecin
+traitant** […]. Ces dispositions s'appliquent à compter du **1er septembre 2026 sous réserve d'une
+modification préalable de la liste des actes** (art. L. 162-1-7). »
+
+> ⚠️ **Trois erreurs de presse que j'avais rapportées, corrigées par le livret** : l'acte n'est **pas**
+> réservé à l'exercice coordonné (ESP/ESS/CDS/MSP) et n'est **pas** limité à 8 séances — ces conditions
+> appartiennent à la section **accès direct**, un dispositif différent. Et la FAQ SNMKR annonce le
+> *1er juillet 2026* : **périmée**, le livret dit 1er septembre.
+
+**2. +0,3 point au 01/07/2027 sur ~12 lettres-clés** (RAM, RAO, RSC, RSM, RIC, RIM, VIM, VIC, VSM, VSC,
+DRA, APM — ex-AMS 7,5, soit **le gros du catalogue**). *Trouvé dans le livret p.5* : « *0,9 point en
+2 étapes : +0,6 au 1er juillet 2025 ; +0,3 au 1er juillet 2027* » (le +0,6 a été gelé par l'alerte ONDAM
+puis appliqué au 01/01/2026 — il est déjà dans les coefficients actuels). Personne ne l'avait vu.
+
+**Pourquoi on ne les ajoute pas maintenant** — les deux sont **absents du tableau SNMKR v19**, notre
+source unique. Pour le bilan fragilité, cette absence à 6 semaines de l'échéance est en soi
+l'information : la modification de la LAP n'a pas eu lieu. Les ajouter briserait la réconciliation
+**91/91** et créerait une **fausse alarme permanente** du veilleur — ce qui apprend à ignorer l'outil, et
+c'est l'alerte DAP qui en meurt. On attend que le SNMKR publie : le veilleur les verra apparaître en
+« absent de la base ». **On ne devance pas la source.**
 
 - Le veilleur ne surveille que le SNMKR. Un avenant paraît d'abord au **JO** — une veille Légifrance
   donnerait de l'avance, mais le tableau SNMKR reste la source de la base.
