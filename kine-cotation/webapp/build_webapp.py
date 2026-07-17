@@ -102,6 +102,9 @@ nav button{background:transparent;color:var(--on-ink-muted);border:0;padding:7px
   transition:all var(--dur-1) var(--ease)}
 nav button:hover{color:var(--on-ink)}
 nav button.on{background:var(--on-ink);color:var(--ink);font-weight:600}
+nav a#nav-out{color:var(--on-ink-muted);text-decoration:none;font-size:13px;padding:7px 14px;
+  border-radius:6px;transition:color var(--dur-1) var(--ease)}
+nav a#nav-out:hover{color:var(--on-ink)}
 /* mobile : le header ne doit pas manger l'ecran. La baseline est du marketing,
    le barème est de la preuve -> on sacrifie la baseline, on garde le barème. */
 @media(max-width:640px){
@@ -240,6 +243,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
   <nav>
     <button id="nav-cot" class="on" onclick="show('cotation')">Cotation</button>
     <button id="nav-prof" onclick="show('profil')">Mon profil</button>
+    <a id="nav-out" href="/logout" style="display:none">Déconnexion</a>
   </nav>
 </header>
 
@@ -702,6 +706,8 @@ document.querySelectorAll('.seg').forEach(seg=>{
 });
 document.getElementById('bareme').textContent =
   'barème v'+KB._meta.version+' · lettre-clé '+eur(lettre());
+// Deconnexion : seulement en mode SERVI (http). En file:// c'est un lien mort -> masque.
+if(location.protocol.indexOf('http')===0) document.getElementById('nav-out').style.display='';
 const _wd=document.getElementById('w_date');
 _wd.value=dateSeance; _wd.min=KB._meta.applicable_depuis||'';
 fillRegions(); renderActes(); render();

@@ -37,9 +37,9 @@ def _lire_env():
 
 def main():
     print("Creation du compte kine\n" + "-" * 24)
-    user = input("Identifiant (email) : ").strip()
+    user = input("Identifiant (ex. malcom.dorante) : ").strip()
     while not user:
-        user = input("Identifiant (email) : ").strip()
+        user = input("Identifiant (ex. malcom.dorante) : ").strip()
 
     pwd = getpass.getpass("Mot de passe        : ")
     pwd2 = getpass.getpass("Confirmer           : ")
@@ -73,9 +73,15 @@ def main():
     ]
     ENV.write_text("\n".join(lignes), encoding="utf-8")
     print(f"\nOK  compte cree pour {user}  ->  {ENV}")
-    if not conf["MISTRAL_API_KEY"]:
-        print("A FAIRE : coller MISTRAL_API_KEY dans .env pour activer l'OCR (sans, l'app marche sans OCR).")
-    print("Lancer :  python server.py   puis  http://127.0.0.1:8770")
+    print("\n--- POUR UN HEBERGEMENT : colle ces variables dans le dashboard de l'hote ---")
+    print(f"APP_USER={conf['APP_USER']}")
+    print(f"APP_PASSWORD_HASH={conf['APP_PASSWORD_HASH']}")
+    print(f"SECRET_KEY={conf['SECRET_KEY']}")
+    print("MISTRAL_API_KEY=<coller la cle Mistral>   (OCR ; sans elle l'app marche sans OCR)")
+    print("HOST=0.0.0.0                              (ecoute publique)")
+    print("# NE PAS mettre COOKIE_INSECURE en prod : l'hote est en HTTPS -> cookie Secure.")
+    print("---------------------------------------------------------------------------")
+    print("\nEn local : python server.py  puis  http://127.0.0.1:8770")
 
 
 if __name__ == "__main__":

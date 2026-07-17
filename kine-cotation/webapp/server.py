@@ -74,7 +74,8 @@ button:hover{{background:var(--accent-deep)}}
   <p class="sub">cote au juste tarif, avec la preuve derrière</p>
   {err}
   <label for="u">Identifiant</label>
-  <input id="u" name="user" type="email" autocomplete="username" autofocus required>
+  <input id="u" name="user" type="text" autocomplete="username" autocapitalize="none"
+         spellcheck="false" autofocus required>
   <label for="p">Mot de passe</label>
   <input id="p" name="password" type="password" autocomplete="current-password" required>
   <button type="submit">Se connecter</button>
@@ -173,4 +174,17 @@ def api_ocr():
 if __name__ == "__main__":
     if not auth.configured():
         print("[!] Auth non configurée. Lance d'abord :  python set_password.py")
-    app.run(host="127.0.0.1", port=8770, debug=False)
+    # PORT injecte par l'hebergeur (Render/Fly/...). En local : 8770.
+    port = int(os.environ.get("PORT", "8770"))
+    # Local -> 127.0.0.1 (rien n'ecoute vers l'exterieur). Heberge -> 0.0.0.0
+    # (HOST=0.0.0.0 dans l'env de prod). Le cookie devient Secure des que
+    # COOKIE_INSECURE n'est pas 1 (donc en HTTPS de prod : cookie protege).
+    host = os.environ.get("HOST", "127.0.0.1")
+    try:
+        from waitress import serve  # serveur WSGI de production (cross-platform)
+        print(f"KineCotation sur http://{host}:{port}  (waitress)")
+        serve(app, host=host, port=port, threads=8, ident="KineCotation")
+    except ImportError:
+        # waitress absent : serveur de dev Flask (jamais pour la prod)
+        print(f"KineCotation sur http://{host}:{port}  (dev — installer waitress pour la prod)")
+        app.run(host=host, port=port, debug=False)
