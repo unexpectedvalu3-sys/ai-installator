@@ -1,0 +1,55 @@
+name: Veille NGAP (KinéCotation)
+
+# DÉTECTE une nouvelle version du tableau SNMKR et ouvre une issue.
+# NE MET PAS À JOUR LA BASE, NE PUBLIE RIEN — c'est délibéré, voir 08_VEILLE_NGAP.md :
+# une chaîne scrape-PDF -> release automatique pousserait des coefficients non vérifiés
+# chez tous les kinés, et la justification générée les attesterait. Risque classé
+# CRITIQUE dans 00_PROJECT_PLAN.md §9.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"        # tous les lundis 06:00 UTC
+  workflow_dispatch:            # déclenchement manuel
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer poppler (pdftotext)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Comparer la base au tableau SNMKR publié
+        id: check
+        working-directory: kine-cotation
+        run: |
+          set +e
+          python tools/check_ngap_release.py | tee rapport.txt
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Ouvrir une issue si la nomenclature a bougé
+        if: steps.check.outputs.code == '2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITRE="NGAP : nouvelle version du tableau SNMKR détectée"
+          EXISTE=$(gh issue list --state open --search "$TITRE in:title" --json number --jq '.[0].number')
+          CORPS=$(printf '%s\n\n```\n%s\n```\n\n%s\n' \
+            "La base \`kine-cotation/knowledge_base/ngap_kine.json\` est en retard sur le tableau publié." \
+            "$(cat kine-cotation/rapport.txt)" \
+            "**Le diff n'est pas une validation.** Il ne lit que (code, coefficient, tarif) : il ne voit ni les seuils DAP, ni les référentiels HAS, ni les libellés, ni à quel acte rattacher un triplet. Vérifier le PDF, corriger la base à la main, bump \`_meta.version\` + \`_changelog\` + \`source_url\`, puis commiter — la release de l'app part toute seule sur ce commit.")
+          if [ -n "$EXISTE" ]; then
+            gh issue comment "$EXISTE" --body "$CORPS"
+          else
+            gh issue create --title "$TITRE" --body "$CORPS" --label "ngap,priorité"
+          fi

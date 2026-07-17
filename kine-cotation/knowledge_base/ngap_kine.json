@@ -1,9 +1,15 @@
 {
   "_meta": {
-    "source": "SNMKR — Tableau NGAP v15a, tarifs applicables au 1er janvier 2026 (NGAP avenant 7)",
-    "source_url": "https://snmkr.fr/wp-content/uploads/2025/12/tableau-ngap_v15a.pdf",
-    "version": "1.0",
+    "source": "SNMKR — Tableau NGAP v19, tarifs applicables au 28 mai 2026 (NGAP avenant 7 + avenant 8)",
+    "source_url": "https://snmkr.fr/wp-content/uploads/2026/06/tableau-ngap_v19.pdf",
+    "version": "1.2",
     "date_extraction": "2026-06-27",
+    "date_verification": "2026-07-17",
+    "_changelog": [
+      "v1.2 (2026-07-17) — Ecarts trouves par tools/check_ngap_release.py (diff automatise contre le PDF v19), que la verification a la main de v1.1 avait MANQUES. (1) BUG lettre-cle : 'Affection du coude ou de l'avant-bras non operee' etait codee VSC (code de l'acte opere) au lieu de VSM. Meme tarif -> invisible a un diff de tarifs, mais mauvaise lettre-cle = rejet/indu. (2) Le 01/09 ne touche pas 1 acte mais 5 (+1 point sur les NMI neuro) : para/tetraplegie 11,01->12,01 · deficiences 2 membres+ 10->11 · myopathie 10,99->11,99 · encephalopathie 11->12, en plus de l'atteinte peripherique multi 10,01->11,01 deja encodee. Toutes en _a_partir_du/_futur, ANNEE 2026 A CONFIRMER. Le moteur ne gere toujours pas les cotations datees.",
+      "v1.1 (2026-07-17) — Recale sur tableau SNMKR v19 (tarifs au 28/05/2026). Avenant 8 (JO 19/12/2025, JORFTEXT000053052062, annexe 2) : TER 9.49->9.79 (20.97->21.64), TER 9.51->9.81 (21.02->21.68), APM 9.50->9.80 (21.00->21.66). Tout le reste de la base a ete verifie conforme au v19 (NMI, TER 16, APM membre unique, RAV, valeur lettre-cle 2.21). En attente : NMI 10.01->11.01 au 01/09 (voir _a_partir_du).",
+      "v1.0 (2026-06-27) — Extraction initiale depuis tableau SNMKR v15a (tarifs au 01/01/2026)."
+    ],
     "avertissement": "Outil d'AIDE A LA DECISION. Le kine reste seul responsable de sa facturation. Verifier la version en vigueur du tableau SNMKR/ameli avant usage. Le coefficient depend de l'ACTE PRECIS, pas seulement de la lettre-cle.",
     "valeur_lettre_cle_eur": { "metropole": 2.21, "drom": 2.43 },
     "formule": "tarif = coefficient x valeur_lettre_cle (arrondi au centime)",
@@ -63,7 +69,7 @@
     { "article": "1B", "region": "membre_sup", "code": "RSM", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": false, "referentiel": true,  "libelle": "Fracture extremite distale des deux os de l'avant-bras non operee" },
     { "article": "1B", "region": "membre_sup", "code": "RSM", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": false, "referentiel": true,  "libelle": "Fracture (avec ou sans luxation) non operee du coude chez l'adulte" },
     { "article": "1B", "region": "membre_sup", "code": "RSC", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": true,  "referentiel": true,  "libelle": "Fracture (avec ou sans luxation) operee du coude chez l'adulte" },
-    { "article": "1B", "region": "membre_sup", "code": "VSC", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": false, "libelle": "Affection du coude ou de l'avant-bras non operee" },
+    { "article": "1B", "region": "membre_sup", "code": "VSM", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": false, "libelle": "Affection du coude ou de l'avant-bras non operee", "_maj": "CORRIGE 2026-07-17 : la base disait VSC (code de l'acte OPERE). Le tableau v19 dit VSM pour le non-opere (regle constante : VSM=medical / VSC=chirurgical). Meme tarif, mais mauvaise lettre-cle = rejet de teletransmission ou indu. Detecte par tools/check_ngap_release.py." },
     { "article": "1B", "region": "membre_sup", "code": "VSC", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": true,  "referentiel": false, "libelle": "Affection du coude ou de l'avant-bras operee" },
     { "article": "1B", "region": "membre_sup", "code": "RSM", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": true,  "libelle": "Tendinopathie de la coiffe des rotateurs non operee" },
     { "article": "1B", "region": "membre_sup", "code": "RSC", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": true,  "referentiel": true,  "libelle": "Apres reinsertion/suture de tendons de la coiffe des rotateurs" },
@@ -88,8 +94,8 @@
     { "article": "1C", "region": "membre_inf", "code": "VIM", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": false, "referentiel": false, "libelle": "Au moins deux segments du meme membre inferieur sans chirurgie" },
     { "article": "1C", "region": "membre_inf", "code": "VIC", "coefficient": 8.12, "tarif_metropole": 17.95, "chirurgie": true,  "referentiel": false, "libelle": "Au moins deux segments du meme membre inferieur avec chirurgie" },
 
-    { "article": "1D", "region": "multi_territoires", "code": "TER", "coefficient": 9.49, "tarif_metropole": 20.97, "chirurgie": false, "referentiel": false, "libelle": "Au moins 2 territoires leses sans chirurgie" },
-    { "article": "1D", "region": "multi_territoires", "code": "TER", "coefficient": 9.51, "tarif_metropole": 21.02, "chirurgie": true,  "referentiel": false, "libelle": "Au moins 2 territoires leses avec chirurgie" },
+    { "article": "1D", "region": "multi_territoires", "code": "TER", "coefficient": 9.79, "tarif_metropole": 21.64, "chirurgie": false, "referentiel": false, "libelle": "Au moins 2 territoires leses sans chirurgie", "_maj": "avenant 8 au 28/05/2026 (ex-9.49 / 20.97)" },
+    { "article": "1D", "region": "multi_territoires", "code": "TER", "coefficient": 9.81, "tarif_metropole": 21.68, "chirurgie": true,  "referentiel": false, "libelle": "Au moins 2 territoires leses avec chirurgie", "_maj": "avenant 8 au 28/05/2026 (ex-9.51 / 21.02)" },
 
     { "article": "1E", "region": "rachis", "code": "DRA", "coefficient": 8.09, "tarif_metropole": 17.88, "chirurgie": false, "referentiel": false, "libelle": "Deviation du rachis lombo-sacre (moins de 18 ans)" },
     { "article": "1E", "region": "rachis", "code": "DRA", "coefficient": 8.08, "tarif_metropole": 17.86, "chirurgie": false, "referentiel": false, "libelle": "Deviation du rachis dorsal (moins de 18 ans)" },
@@ -98,7 +104,7 @@
 
     { "article": "1F", "region": "amputation", "code": "APM", "coefficient": 8.11, "tarif_metropole": 17.92, "chirurgie": true, "referentiel": false, "libelle": "Amputation d'un membre superieur" },
     { "article": "1F", "region": "amputation", "code": "APM", "coefficient": 8.1,  "tarif_metropole": 17.90, "chirurgie": true, "referentiel": false, "libelle": "Amputation d'un membre inferieur" },
-    { "article": "1F", "region": "amputation", "code": "APM", "coefficient": 9.5,  "tarif_metropole": 21.00, "chirurgie": true, "referentiel": false, "libelle": "Amputation d'au moins 2 membres" },
+    { "article": "1F", "region": "amputation", "code": "APM", "coefficient": 9.8,  "tarif_metropole": 21.66, "chirurgie": true, "referentiel": false, "libelle": "Amputation d'au moins 2 membres", "_maj": "avenant 8 au 28/05/2026 (ex-9.50 / 21.00)" },
 
     { "article": "2", "region": "rhumato_inflammatoire", "code": "NMI", "coefficient": 8,    "tarif_metropole": 17.68, "chirurgie": false, "referentiel": false, "libelle": "Rhumatisme inflammatoire - atteinte localisee a un membre ou le tronc" },
     { "article": "2", "region": "rhumato_inflammatoire", "code": "NMI", "coefficient": 9.01, "tarif_metropole": 19.91, "chirurgie": false, "referentiel": false, "libelle": "Rhumatisme inflammatoire - plusieurs membres ou tronc + membres" },
@@ -107,13 +113,13 @@
     { "article": "3", "region": "abdo_perineo", "code": "RAB", "coefficient": 8,    "tarif_metropole": 17.68, "chirurgie": false, "referentiel": false, "libelle": "Reeducation abdominale du post-partum" },
 
     { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 8.5,   "tarif_metropole": 18.79, "chirurgie": false, "referentiel": false, "libelle": "Atteinte peripherique radiculaire/tronculaire localisee a un membre ou la face" },
-    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10.01, "tarif_metropole": 22.12, "chirurgie": false, "referentiel": false, "libelle": "Atteinte peripherique interessant plusieurs membres" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10.01, "tarif_metropole": 22.12, "chirurgie": false, "referentiel": false, "libelle": "Atteinte peripherique interessant plusieurs membres", "_a_partir_du": "2026-09-01", "_futur": { "coefficient": 11.01, "tarif_metropole": 24.33 }, "_maj": "Tableau SNMKR v19 : 'Avant le 01/09 : NMI 10,01 (22,12) / Des le 01/09 : NMI 11,01 (24,33)'. ANNEE 2026 A CONFIRMER en source primaire. Le moteur ne gere pas encore les cotations datees." },
     { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 9,     "tarif_metropole": 19.89, "chirurgie": false, "referentiel": false, "libelle": "Reeducation de l'hemiplegie" },
-    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 11.01, "tarif_metropole": 24.33, "chirurgie": false, "referentiel": false, "libelle": "Reeducation de la paraplegie et de la tetraplegie" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 11.01, "tarif_metropole": 24.33, "chirurgie": false, "referentiel": false, "libelle": "Reeducation de la paraplegie et de la tetraplegie", "_a_partir_du": "2026-09-01", "_futur": { "coefficient": 12.01, "tarif_metropole": 26.54 }, "_maj": "v19 : 'Avant le 01/09 : NMI 11,01 / Des le 01/09 : NMI 12,01'. ANNEE A CONFIRMER." },
     { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 8.51,  "tarif_metropole": 18.81, "chirurgie": false, "referentiel": false, "libelle": "Affection neuro stable/evolutive - deficiences a un membre et sa racine" },
-    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10,    "tarif_metropole": 22.10, "chirurgie": false, "referentiel": false, "libelle": "Affection neuro stable/evolutive - 2 membres ou plus, ou membre + tronc/face" },
-    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10.99, "tarif_metropole": 24.29, "chirurgie": false, "referentiel": false, "libelle": "Reeducation des malades atteints de myopathie" },
-    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 11,    "tarif_metropole": 24.31, "chirurgie": false, "referentiel": false, "libelle": "Reeducation encephalopathie infantile (stade initial a l'age adulte)" },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10,    "tarif_metropole": 22.10, "chirurgie": false, "referentiel": false, "libelle": "Affection neuro stable/evolutive - 2 membres ou plus, ou membre + tronc/face", "_a_partir_du": "2026-09-01", "_futur": { "coefficient": 11, "tarif_metropole": 24.31 }, "_maj": "v19 : 'Avant le 01/09 : NMI 10 / Des le 01/09 : NMI 11'. ANNEE A CONFIRMER." },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 10.99, "tarif_metropole": 24.29, "chirurgie": false, "referentiel": false, "libelle": "Reeducation des malades atteints de myopathie", "_a_partir_du": "2026-09-01", "_futur": { "coefficient": 11.99, "tarif_metropole": 26.50 }, "_maj": "v19 : 'Avant le 01/09 : NMI 10,99 / Des le 01/09 : NMI 11,99'. ANNEE A CONFIRMER." },
+    { "article": "4", "region": "neuro_musculaire", "code": "NMI", "coefficient": 11,    "tarif_metropole": 24.31, "chirurgie": false, "referentiel": false, "libelle": "Reeducation encephalopathie infantile (stade initial a l'age adulte)", "_a_partir_du": "2026-09-01", "_futur": { "coefficient": 12, "tarif_metropole": 26.52 }, "_maj": "v19 : 'Avant le 01/09 : NMI 11 / Des le 01/09 : NMI 12'. ANNEE A CONFIRMER." },
     { "article": "4", "region": "neuro_musculaire", "code": "TER", "coefficient": 16,    "tarif_metropole": 35.36, "chirurgie": false, "referentiel": false, "libelle": "Enfants paralysie cerebrale / polyhandicap (prescription etablissement coordinateur)" },
 
     { "article": "5", "region": "respiratoire", "code": "ARL", "coefficient": 8.49, "tarif_metropole": 18.76, "chirurgie": false, "referentiel": false, "libelle": "Maladies respiratoires avec desencombrement urgent (bronchiolite du nourrisson...)" },

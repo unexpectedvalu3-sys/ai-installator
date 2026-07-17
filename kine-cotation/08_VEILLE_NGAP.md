@@ -1,0 +1,74 @@
+# KinéCotation — Veille NGAP & releases
+
+> 2026-07-17. Demande d'Enzo : « il faudrait que ça check la dernière release de la db
+> et qu'on fasse des release auto si jamais il y a du changement ».
+
+---
+
+## 1. Le partage — et pourquoi je ne suis la demande qu'à moitié
+
+| Étape | Qui | Pourquoi |
+|---|---|---|
+| **Détecter** un nouveau tableau SNMKR | 🤖 **auto** (lundi 06:00 UTC) | Aucun risque. Le barème a bougé 3× en 8 mois : personne ne peut surveiller ça à la main. |
+| **Mettre à jour `ngap_kine.json`** | 👤 **Enzo** | ⛔ **Jamais automatique.** Voir §2. |
+| **Builder + publier l'app** | 🤖 **auto** (sur le commit de la base) | Le déclencheur est **ta validation** → tout automatiser est sûr. Zéro corvée entre « la base est juste » et « le kiné a la bonne version ». |
+
+**Tu as raison sur la release, pas sur la mise à jour de la base.**
+
+## 2. Pourquoi la base ne se met JAMAIS à jour toute seule
+
+`00_PROJECT_PLAN.md` §9 classe en risque **🔴 critique** : « données NGAP fausses → mauvaise
+cotation → **on cause un indu** ». Une chaîne scrape-PDF → release automatique pousserait des
+coefficients non vérifiés chez tous les kinés — **et la justification générée les attesterait**.
+On ne se contenterait pas de faire perdre de l'argent : on signerait l'erreur.
+
+Le diff automatique est fiable sur ce qu'il lit (couverture mesurée : **91/91 triplets**), mais il
+ne lit que `(code, coefficient, tarif)`. **Il ne voit pas** : à quel acte rattacher un triplet (il y
+a plusieurs `TER`, plusieurs `NMI` — et `NMI 11,01` est à la fois la valeur *actuelle* de la
+paraplégie et la valeur *future* de l'atteinte périphérique multiple) ; les actes ajoutés ou
+supprimés ; les libellés remaniés ; les seuils DAP ; les référentiels HAS ; les champs éditoriaux
+(article, région, chirurgie, référentiel). **Ce sont des jugements humains.**
+
+> Le veilleur lève l'alarme et montre l'écart. Enzo tranche.
+
+## 3. Le veilleur a payé dès son premier run
+
+`tools/check_ngap_release.py` a trouvé, contre le tableau v19, **deux écarts que ma vérification à
+la main du matin (v1.1) avait manqués** :
+
+1. **🔴 Bug de lettre-clé** — « Affection du coude ou de l'avant-bras **non opérée** » était codée
+   **`VSC`** (le code de l'acte *opéré*) au lieu de **`VSM`**. Tarif identique (17,88 €) → **invisible
+   à un diff de tarifs**. Mais une mauvaise lettre-clé, c'est un rejet de télétransmission ou un indu.
+   Détectée parce que le diff indexe sur `(code, coefficient)`, pas sur le tarif.
+2. **Le 01/09 touche 5 actes, pas 1** — j'en avais encodé un seul. Les cinq NMI neuro prennent
+   +1 point : para/tétraplégie 11,01→12,01 · déficiences 2 membres+ 10→11 · myopathie 10,99→11,99 ·
+   encéphalopathie 11→12 · atteinte périphérique multiple 10,01→11,01.
+
+→ **Base v1.2 : 91/91 triplets réconciliés avec le tableau officiel.** Vérifié par machine, plus par mon œil.
+
+## 4. Les pièces
+
+- **`tools/check_ngap_release.py`** — lit la page SNMKR, prend le PDF le plus récent, compare à
+  `_meta.source_url`, et si drift : télécharge, extrait (poppler `pdftotext -layout`), diffe, rapporte.
+  Sorties : `0` à jour · `2` drift · `1` erreur. `--json` pour la CI.
+  Les cotations **futures** (`_futur`) sont incluses dans la comparaison — sinon les 5 NMI du 01/09
+  seraient signalées « absentes de la base » à chaque passage : **une fausse alarme permanente
+  apprend à ignorer l'outil**, et c'est l'alerte DAP qui en meurt.
+- **`.github/workflows/ngap-watch.yml`** — lundi 06:00 UTC. Drift → ouvre (ou commente) une issue
+  avec le diff. Ne touche à rien.
+- **`.github/workflows/kine-release.yml`** — sur push touchant la base → build + release
+  `kine-v<version>` avec `kinecotation.html`.
+  **Garde-fou** : si l'app n'embarque pas la version de la base, **le build casse**. Une app qui
+  porterait un vieux barème produirait une justification qui atteste le mauvais barème — le pire
+  échec possible pour un produit dont la promesse est la preuve.
+
+## 5. Reste à faire
+
+- **Diffuser au kiné** : la release GitHub existe, mais l'app ne va pas encore la chercher.
+  Rebrancher le mécanisme déjà éprouvé du comparateur (GitHub Releases + cache local + repli
+  embarqué) — cf. [[comparateur-courtier-app]].
+- **Le moteur ne gère pas les cotations datées** — les 5 `_futur` sont encodées mais dormantes.
+  **À faire avant le 01/09** (dans 6 semaines), sinon la base sera fausse sur 5 actes neuro.
+- **Confirmer l'année du « 01/09 »** en source primaire (le PDF dit « 01/09 » sans millésime).
+- Le veilleur ne surveille que le SNMKR. Un avenant paraît d'abord au **JO** — une veille Légifrance
+  donnerait de l'avance, mais le tableau SNMKR reste la source de la base.
