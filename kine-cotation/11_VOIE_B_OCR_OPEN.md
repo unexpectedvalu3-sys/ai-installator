@@ -102,7 +102,7 @@ Comparaison **à trois** (10 synthétiques tapées, après ajustement prompt+coe
 | Champ | Mistral medium (A, cloud) | Claude Sonnet (A, cloud) | Qwen2.5-VL-7B (B, local) |
 |---|---|---|---|
 | nb_seances | 100 % | 100 % | 100 % |
-| **chirurgie** | **100 %** | 70 % | 70 % |
+| chirurgie | 100 % | **100 %** (était 70 %) | **90 %** (était 70 %) |
 | domicile | 100 % | 100 % | 100 % |
 | bilan | 100 % | 100 % | 100 % (était 20 %) |
 | acte top-1 | 80 % | 80 % | 60 % |
@@ -110,10 +110,13 @@ Comparaison **à trois** (10 synthétiques tapées, après ajustement prompt+coe
 | alerte DAP | 89 % | 89 % | 89 % |
 | perf / coût | API FR/UE | API cloud | **~10 s/img, local, gratuit** |
 
-**Mistral medium gagne** (chirurgie 100 % — seul à ne pas se tromper sur opéré/non). Claude 2e.
-**Qwen local est juste derrière** : à parité sur tout l'extraction sauf `chirurgie` (70 %, partagé
-avec Claude) et top-1 (60 %). Pour un modèle **gratuit sur la RTX 4070**, c'est un excellent signal
-pour la voie B souveraine.
+Après correctifs (prompt + coercions), **les trois sont solides sur l'extraction du tapé** : Mistral et
+Claude à 100 % partout sauf top-1 80 %, Qwen juste derrière (chirurgie 90 %, top-1 60 %). Pour un
+modèle **gratuit sur la RTX 4070**, excellent signal pour la voie B souveraine.
+
+Le `chirurgie` 70 %→100/90 % : le champ n'était pas contraint → les modèles rendaient du texte libre
+(« operee ») ou se réfugiaient dans « inconnu ». Corrigé au prompt (oui/non/inconnu exigés, liste des
+gestes chirurgicaux) + normalisation `_to_chirurgie` (mot chirurgical → oui, négation → non).
 
 **Lecture** : la voie B est à **quasi-parité** sur le tapé — un modèle open, gratuit, sur la machine
 d'Enzo, égale Claude Sonnet sur **tous les champs d'extraction** (séances, domicile, bilan) sauf

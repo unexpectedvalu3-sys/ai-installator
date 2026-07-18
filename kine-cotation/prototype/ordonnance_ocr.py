@@ -65,8 +65,13 @@ Regles :
 - N'invente rien. Si une information est absente ou illisible, mets null et signale-le
   dans 'alertes'.
 - Recopie le diagnostic / la zone / le geste exactement comme ecrit (pathologie_texte).
-- Deduis 'zone', 'chirurgie' et 'specialite' uniquement si l'ordonnance le permet sans
-  ambiguite ; sinon mets 'inconnu' + alerte.
+- Deduis 'zone' et 'specialite' uniquement si l'ordonnance le permet sans ambiguite ;
+  sinon mets 'inconnu' + alerte.
+- 'chirurgie' = EXACTEMENT 'oui', 'non' ou 'inconnu' (jamais de texte libre comme
+  'operee') : 'oui' si un geste chirurgical est mentionne (opere, prothese,
+  arthroplastie, reconstruction, reinsertion, suture, arthroscopie, amputation,
+  ligamentoplastie) ; 'non' si explicitement non opere ou aucun geste ; 'inconnu'
+  seulement si vraiment ambigu.
 - Champs texte absents/illisibles : chaine vide "". Seances non indiquees : 0.
 - TYPES STRICTS. Respecte le type de chaque cle, ne mets JAMAIS de texte a la place :
   * 'domicile', 'urgence', 'mention_bilan' = booleen true ou false (PAS le texte de
@@ -139,6 +144,34 @@ def _to_int(v):
     return int(m.group()) if m else 0
 
 
+_CHIR_MOTS = ("oper", "chirurg", "prothes", "arthroplast", "reconstruc",
+              "reinsertion", "suture", "arthroscop", "amputation", "ligamentoplast")
+
+
+def _to_chirurgie(v):
+    """Coerce le statut chirurgical -> 'oui' | 'non' | 'inconnu'.
+
+    Les modeles renvoient souvent du texte libre ('operee', 'operee le 30/05') au
+    lieu de oui/non -> le score (booleen) le lit comme non-oui et RATE les cas
+    operes. On mappe : negation explicite -> non ; mot chirurgical -> oui.
+    Diagnostic mesure le 2026-07-18 (chirurgie 70% = les 3 cas operes rates).
+    """
+    if isinstance(v, bool):
+        return "oui" if v else "non"
+    s = str(v if v is not None else "").strip().lower()
+    if not s or s == "inconnu":
+        return "inconnu"
+    if "non oper" in s or "non-oper" in s or "sans chirurg" in s:
+        return "non"
+    if any(m in s for m in _CHIR_MOTS):
+        return "oui"
+    if s in ("oui", "o", "true", "vrai", "yes"):
+        return "oui"
+    if s in ("non", "n", "false", "faux", "no"):
+        return "non"
+    return "inconnu"
+
+
 def _extraire_json(texte: str) -> dict:
     """Recupere le 1er objet JSON d'une reponse (tolere les fences ```json)."""
     t = texte.strip()
@@ -169,10 +202,8 @@ def lire_ordonnance(path: Path) -> Ordonnance:
     # en mots francais ("oui"/"non"), entiers en texte ("50 seances"). Sans coercion,
     # le schema Pydantic strict rejette TOUT (10/10 erreurs mesurees). On coerce ici
     # pour benchmarker les modeles a armes egales (fair OCR, pas fair formatage JSON).
-    c = data.get("chirurgie")
-    if isinstance(c, bool):
-        data["chirurgie"] = "oui" if c else "non"
-    for champ in ("zone", "cote", "chirurgie"):
+    data["chirurgie"] = _to_chirurgie(data.get("chirurgie"))
+    for champ in ("zone", "cote"):
         if data.get(champ) in (None, ""):
             data[champ] = "inconnu"
     for champ in ("patient_nom", "prescripteur", "date_prescription", "pathologie_texte", "specialite"):
