@@ -137,6 +137,26 @@ deux modèles) ; (3) chirurgie 70 % est partagé → à améliorer au prompt.
 rejetait 10/10. `ordonnance_ocr.py` coerce désormais bool/int/list → on benchmarke l'**OCR** à armes
 égales, pas le formatage JSON. (Claude/Mistral, déjà stricts, ne sont pas affectés.)
 
+## 4 ter. Filtre MANUSCRIT FR (RIMES) — 2026-07-18
+
+L'axe que le synthétique (tapé) ne peut pas tester : **lire l'écriture cursive française**.
+`benchmark/rimes_handwriting.py` fait transcrire N lignes manuscrites réelles de **RIMES**
+(Teklia/RIMES-2011-line, MIT — lettres à des assureurs) et mesure le **CER** (taux d'erreur
+caractère). C'est le 1er filtre des candidats voie B **avant** GPU/ordonnances réelles.
+
+**Qwen2.5-VL-7B, local sur RTX 4070, 12 lignes RIMES :**
+- **CER moyen 2,4 %** (précision caractère **~97,6 %**) · **CER médian 0 %** (moitié des lignes parfaites)
+- **11/12 lignes sous 10 %** d'erreur (1 seule à 18,6 %)
+
+→ **Le modèle souverain gratuit lit le cursif FR quasi sans faute.** Il **franchit décisivement** le
+1er filtre — un modèle qui échouait ici serait éliminé. Combiné à la quasi-parité en extraction (§4bis),
+c'est un signal fort que **la voie B est viable**.
+
+⚠️ **Nuance nécessaire** : RIMES = lettres manuscrites *propres*. Une ordonnance de médecin, c'est du
+*gribouillis* avec abréviations et jargon — plus dur. RIMES prouve que Qwen **peut** lire le cursif FR ;
+il ne prouve pas qu'il lit l'écriture de médecin. Ça, seules les **vraies ordonnances de Malcom** le disent.
+Comparaison cloud (Mistral/Claude) sur RIMES = une variable d'env (mêmes commandes) si on veut un point de référence.
+
 ## 5. Reste à faire
 - Obtenir l'échantillon (15-20 ordonnances réelles anonymisées, manuscrites ET tapées).
 - Monter une GPU HDS de test + vLLM (quelques heures ; coût GPU à l'heure, pas de contrat annuel pour tester).

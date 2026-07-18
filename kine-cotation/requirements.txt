@@ -11,6 +11,9 @@ flask==3.1.3          # webapp/server.py
 itsdangerous==2.2.0   # cookie de session signe — webapp/auth.py (dep de Flask, epinglee)
 python-dotenv==1.2.2  # charge webapp/.env — webapp/server.py
 
+# --- benchmark uniquement (pas l'app) ---
+datasets==5.0.0       # télécharge RIMES (filtre manuscrit FR) — benchmark/rimes_handwriting.py
+
 # Dépendance système (hors pip) : poppler — pour lire/rasteriser les PDF NGAP du SNMKR.
 #   winget install --id oschwartz10612.Poppler --exact
 #   Fournit pdftoppm / pdftotext. Installé le 2026-07-17.
