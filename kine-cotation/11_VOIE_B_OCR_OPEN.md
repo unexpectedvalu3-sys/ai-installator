@@ -144,18 +144,33 @@ L'axe que le synthétique (tapé) ne peut pas tester : **lire l'écriture cursiv
 (Teklia/RIMES-2011-line, MIT — lettres à des assureurs) et mesure le **CER** (taux d'erreur
 caractère). C'est le 1er filtre des candidats voie B **avant** GPU/ordonnances réelles.
 
-**Qwen2.5-VL-7B, local sur RTX 4070, 12 lignes RIMES :**
-- **CER moyen 2,4 %** (précision caractère **~97,6 %**) · **CER médian 0 %** (moitié des lignes parfaites)
-- **11/12 lignes sous 10 %** d'erreur (1 seule à 18,6 %)
+Comparaison **à quatre** (12 lignes RIMES, ordre déterministe) :
 
-→ **Le modèle souverain gratuit lit le cursif FR quasi sans faute.** Il **franchit décisivement** le
-1er filtre — un modèle qui échouait ici serait éliminé. Combiné à la quasi-parité en extraction (§4bis),
-c'est un signal fort que **la voie B est viable**.
+| Modèle | CER moyen | précision | lignes <10 % |
+|---|---|---|---|
+| Claude Sonnet (chat/VLM) | **0,2 %** | 99,8 % | 12/12 |
+| **Mistral OCR 4** (`mistral-ocr-latest`, OCR dédié) | 1,3 % | 98,7 % | 12/12 |
+| **Qwen2.5-VL-7B LOCAL** (RTX 4070, gratuit) | **2,4 %** | 97,6 % | 11/12 |
+| Mistral medium (`mistral-medium-latest`, chat) | 19,6 % | 80,4 % | 0/12 |
 
-⚠️ **Nuance nécessaire** : RIMES = lettres manuscrites *propres*. Une ordonnance de médecin, c'est du
-*gribouillis* avec abréviations et jargon — plus dur. RIMES prouve que Qwen **peut** lire le cursif FR ;
-il ne prouve pas qu'il lit l'écriture de médecin. Ça, seules les **vraies ordonnances de Malcom** le disent.
-Comparaison cloud (Mistral/Claude) sur RIMES = une variable d'env (mêmes commandes) si on veut un point de référence.
+**Deux enseignements majeurs :**
+
+1. **Le modèle souverain gratuit (Qwen local) lit le cursif FR quasi sans faute** (2,4 %), au niveau des
+   meilleurs cloud. Il franchit **décisivement** le 1er filtre → signal fort que **la voie B est viable**.
+2. ⚠️ **NE PAS confondre le modèle chat et l'OCR dédié.** `mistral-medium` (le meilleur en *extraction*
+   du tapé, chirurgie 100 %) est **mauvais en manuscrit** (19,6 %). L'OCR de Mistral, c'est
+   **`mistral-ocr-4`** (1,3 %) — mais c'est un **endpoint séparé** (`/v1/ocr`) qui rend du *texte/markdown*,
+   PAS l'extraction JSON structurée. Donc voie A avec Mistral = **pipeline 2 temps** (OCR 4 transcrit →
+   un modèle texte extrait), OU un seul appel `mistral-medium` (bonne extraction, mauvais manuscrit).
+
+**Ce que ça change pour l'archi** : Claude et **Qwen** font tout en **un seul appel VLM** (lisent le
+manuscrit ET extraient les champs). Mistral impose un choix (2 temps, ou un modèle faible sur un des
+2 axes). → **Qwen local gagne en simplicité ET en souveraineté** : un modèle, une passe, gratuit, sur
+site, bon sur les deux axes.
+
+⚠️ **Nuance qui demeure** : RIMES = lettres manuscrites *propres*. Une ordonnance de médecin = gribouillis
++ abréviations, plus dur. Tous ces scores chutent sur de la vraie écriture de médecin → seules les
+**vraies ordonnances de Malcom** tranchent le go/no-go final.
 
 ## 5. Reste à faire
 - Obtenir l'échantillon (15-20 ordonnances réelles anonymisées, manuscrites ET tapées).
