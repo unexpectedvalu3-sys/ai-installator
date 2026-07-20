@@ -23,3 +23,6 @@ kine-cotation/benchmark/**/predictions.csv
 kine-cotation/benchmark/**/verite_terrain_modele.csv
 kine-cotation/benchmark/**/catalogue_actes.csv
 kine-cotation/benchmark/**/rapport_benchmark.csv
+
+# resultats RIMES par ligne (regenerables)
+kine-cotation/benchmark/rimes/*.csv
