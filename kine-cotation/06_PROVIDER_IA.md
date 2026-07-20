@@ -3,6 +3,14 @@
 > 2026-07-17. Décisions d'Enzo : **architecture local-first** + **OCR conservé** + **provider FR/UE**.
 > Applique CLAUDE.md §4.1 (perception/décision séparées) et §4.2 (provider abstrait).
 
+> **MàJ 2026-07-20 (pilote).** Pour la mise en ligne pilote de Malcom, l'OCR tourne sur **Claude
+> Sonnet** (`KINE_LLM_PROVIDER=anthropic`, `KINE_LLM_MODELE=claude-sonnet-5`), via la **clé Anthropic
+> déjà en main** (mutualisée avec Modul'R) — aucune clé Mistral à créer. La nuance **US est assumée
+> pour le pilote** parce que l'image part **caviardée structurellement** (l'identité patient ne quitte
+> jamais le poste du kiné). La **cible souveraineté FR/UE pour la production reste inchangée** :
+> provider Mistral (défaut) ou VOIE B auto-hébergée. Le provider abstrait (§4.2 / `llm.py`) rend cette
+> bascule triviale.
+
 ---
 
 ## 1. Les décisions prises

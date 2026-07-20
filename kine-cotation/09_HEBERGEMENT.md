@@ -2,6 +2,13 @@
 
 > 2026-07-18. But : Malcom (`malcom.dorante`) se connecte depuis chez lui, par navigateur.
 
+> **MàJ 2026-07-20 (pilote).** OCR du pilote = **Claude Sonnet** via la **clé Anthropic existante**
+> (plus de création de clé Mistral ; révoquer l'ancienne clé Mistral exposée). L'appel part chez
+> Anthropic (**US**) — **nuance assumée pour le pilote** car l'image est **caviardée structurellement**
+> (l'identité ne quitte pas le poste). **Cible souveraineté FR/UE pour la prod inchangée.** Pont de
+> mise en ligne immédiate sans compte d'hôte : **tunnel Cloudflare** depuis le poste d'Enzo
+> (`webapp/start_pilote.ps1`, cf. `14_GUIDE_PILOTE_MALCOM.md` § « Mise en ligne immédiate »).
+
 ---
 
 ## Ce que je peux faire, et ce que toi seul peux faire

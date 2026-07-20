@@ -21,6 +21,10 @@ accounts.json
 # fiche d'acces pilote (mot de passe en clair — jamais publie, a supprimer apres transmission)
 kine-cotation/webapp/PILOTE_ACCES_MALCOM.txt
 
+# logs runtime du pilote (serveur + tunnel cloudflared)
+*.log
+*.log.err
+
 # sorties generees du benchmark (regenerables par run_batch/score)
 kine-cotation/benchmark/**/predictions.csv
 kine-cotation/benchmark/**/verite_terrain_modele.csv

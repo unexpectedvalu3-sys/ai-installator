@@ -194,11 +194,19 @@ d'étapes, à réserver si tu veux du 100 % France.
 HOST=0.0.0.0
 KINE_ACCOUNTS=            # ← sortie de make_account.py (JSON {"comptes":[...]}), NE PAS committer
 SECRET_KEY=              # ← sortie de make_account.py (stable, sinon les sessions sautent)
-MISTRAL_API_KEY=         # ← console.mistral.ai (OCR) ; laisser VIDE = app fonctionne sans OCR
+KINE_LLM_PROVIDER=anthropic
+KINE_LLM_MODELE=claude-sonnet-5
+ANTHROPIC_API_KEY=       # ← COPIER depuis modulr-app/.env (clé existante ; ne pas créer de clé)
 # NE PAS définir PORT (injecté par Render) ni COOKIE_INSECURE (HTTPS -> cookie Secure auto).
 ```
 
-Valeurs non-secrètes déjà bonnes : `HOST=0.0.0.0`. Les 3 champs vides sont **tes** secrets, à ne
+**Provider OCR du pilote = Claude Sonnet** (clé Anthropic déjà en main, mutualisée avec Modul'R) —
+plus besoin de créer une clé Mistral. ⚠️ **Révoque l'ancienne clé Mistral qui a pu être exposée.**
+Nuance souveraineté : l'appel OCR part chez Anthropic (US) — assumé pour le pilote car l'image est
+**caviardée structurellement** (l'identité patient ne quitte jamais le poste) ; la cible
+souveraineté FR/UE pour la **production** reste inchangée (voir `06_PROVIDER_IA.md`, `09_HEBERGEMENT.md`).
+
+Valeurs non-secrètes déjà bonnes : `HOST=0.0.0.0`. Les champs vides sont **tes** secrets, à ne
 jamais committer.
 
 ## D. Vérifier après déploiement (3 commandes)
@@ -215,8 +223,51 @@ curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}\n" https://APP/
 #    attendu : 303 -> https://APP/login     (puis connexion malcom.dorante dans le navigateur)
 
 # 3. OCR — après login dans le navigateur, téléverse une ordonnance ANONYMISÉE
-#    attendu : des actes candidats proposés.  Si MISTRAL_API_KEY vide : message "OCR indisponible"
+#    attendu : des actes candidats proposés.  Si ANTHROPIC_API_KEY vide : message "OCR indisponible"
 #    propre (pas d'erreur) — l'app reste utilisable sans OCR.
 ```
 
 Envoie ensuite l'URL + l'identifiant à Malcom. C'est en ligne.
+
+---
+---
+
+# Mise en ligne immédiate (tunnel depuis le poste d'Enzo)
+
+> Le chemin **le plus rapide** pour donner l'accès à Malcom **maintenant**, sans compte d'hébergeur,
+> sans déploiement. Utile pour démarrer le pilote le jour même. Le passage **Render (15 min)
+> documenté plus haut** reste la voie durable ; ceci en est le **pont**.
+
+## Ce que c'est
+Un **tunnel Cloudflare** (`cloudflared`) expose le serveur qui tourne **sur le poste d'Enzo** derrière
+une URL publique HTTPS `https://xxxxx.trycloudflare.com`. Aucun compte, aucune carte, aucun DNS :
+Cloudflare fabrique l'URL à la volée. Le serveur reste en `127.0.0.1:8770` ; seul le tunnel sort.
+
+## Les limites — honnêtes
+- **URL éphémère** : elle **change à chaque redémarrage du tunnel** (relance de `start_pilote.ps1`).
+  Il faut la **redonner à Malcom** après chaque relance. Mets-la en favori le temps d'une session,
+  pas pour la semaine.
+- **Le poste d'Enzo doit rester allumé** (et connecté) pendant que Malcom utilise l'app : si la
+  machine dort ou s'éteint, l'URL tombe.
+- **C'est un pont de pilote, pas de la production.** Débit best-effort, pas de SLA, pas de domaine
+  stable. Dès que le pilote se confirme, on bascule sur **Render (section plus haut)** pour une URL
+  fixe et une machine qui n'est pas celle d'Enzo.
+
+## Démarrer / redémarrer
+```powershell
+cd kine-cotation\webapp
+powershell -ExecutionPolicy Bypass -File start_pilote.ps1
+```
+Le script : (1) lance le serveur (waitress, port 8770) en process **détaché** ; (2) ouvre le tunnel ;
+(3) **affiche l'URL publique** à dicter à Malcom. Prérequis déjà en place : compte `malcom.dorante`
+(`accounts.json`), `webapp/.env` (SECRET_KEY + provider Claude + clé Anthropic), `cloudflared` installé.
+
+**Où lire l'URL** : elle s'affiche en clair à la fin de `start_pilote.ps1` (cadre vert). Si tu l'as
+perdue, elle est aussi dans le log du tunnel : `kine-cotation\webapp\pilote_tunnel.log` (cherche
+`trycloudflare.com`).
+
+**Arrêter** : ferme les process `python` et `cloudflared` (Gestionnaire des tâches), ou
+`Get-Process python,cloudflared | Stop-Process`.
+
+Identifiant/mot de passe de Malcom : voir `webapp/PILOTE_ACCES_MALCOM.txt` (fichier local gitignoré,
+à transmettre par un canal sûr **puis supprimer**).
