@@ -189,6 +189,39 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
 .file{border:1px dashed var(--line-strong);border-radius:7px;padding:var(--sp-3);background:var(--paper)}
 .file input{border:0;background:transparent;padding:0;font-size:12.5px}
 
+/* ---------- caviardage de l'ordonnance (etape 00) ----------
+   L'image d'ordonnance est une donnee de SANTE. Le geste de masquage se fait
+   ICI, en local, sur un canvas : seule la version aux pixels noircis quittera le
+   poste (cf. caviarderEtAnalyser). Le geste = glisser (souris OU doigt), comme
+   un outil de capture d'ecran — universel, rien a apprendre. */
+/* fond carte (le plus clair) pour que la microcopie mutee passe AA ; l'affordance
+   « zone d'action » est portee par la bordure accent gauche, pas par une teinte de
+   fond qui abaisserait le contraste du texte. */
+.cav{margin-top:var(--sp-3);border:1px solid var(--accent-line);border-left:3px solid var(--accent);
+  background:var(--card);border-radius:8px;padding:var(--sp-3)}
+.cav .hint{font-size:12.5px;color:var(--ink-2);margin-bottom:var(--sp-2)}
+.cav .hint b{color:var(--ink)}
+.cavwrap{position:relative;border:1px solid var(--line-strong);border-radius:6px;overflow:hidden;
+  background:var(--paper-2);line-height:0}
+/* touch-action:none -> le glissement dessine, il ne fait pas defiler la page (mobile). */
+#ordoCanvas{display:block;max-width:100%;height:auto;cursor:crosshair;touch-action:none}
+.cavbar{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;margin-top:var(--sp-2)}
+.cavbar .grow{flex:1}
+.act.mini{padding:6px 10px;font-size:12px}
+.cavcount{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.cavnote{font-size:11px;color:var(--ink-soft);margin-top:var(--sp-2)}
+button.act:disabled{background:var(--line-strong);color:var(--on-ink-muted);cursor:not-allowed}
+button.act:disabled:hover{background:var(--line-strong)}
+
+/* ---------- champ patient (en-tete de la feuille, STRICTEMENT local) ----------
+   La valeur ne quitte jamais le poste : ni reseau, ni localStorage (une feuille =
+   un patient). Cf. setPatient / reset. */
+.patientbox{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+  padding-bottom:var(--sp-3);margin-bottom:var(--sp-3);border-bottom:1px solid var(--line)}
+.patientbox label{margin:0;font-weight:600;color:var(--ink);white-space:nowrap;font-size:13px}
+.patientbox input{flex:1;min-width:140px;width:auto;font-size:13.5px}
+.patientbox .local{font-size:11px;color:var(--ink-soft);white-space:nowrap}
+
 /* ---------- impression : la feuille seule ---------- */
 @media print{
   header,nav,#tab-cotation .builder,.noprint{display:none!important}
@@ -248,7 +281,9 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
 
     <div class="step">
       <div class="lbl"><span class="idx">00</span> Ordonnance (optionnel)</div>
-      <div class="file"><input type="file" accept="image/*,.pdf" onchange="uploadOrdo(this)"></div>
+      <!-- Images seules : le caviardage se fait sur canvas, qui ne rend pas les PDF
+           sans lib. PDF selectionne -> message propre (voir onOrdoFile). -->
+      <div class="file"><input id="ordoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="onOrdoFile(this)"></div>
       <div id="ocrPanel"></div>
     </div>
 
@@ -298,6 +333,16 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
 
   <div class="card sticky">
     <h2 class="noprint">Feuille de soins</h2>
+    <!-- Patient : saisi LOCALEMENT. Champ statique (jamais reconstruit par render())
+         pour ne pas perdre le focus a chaque frappe. La valeur alimente l'en-tete
+         imprime (« Patient : X », rendu dans .fh) et la justification. Elle ne part
+         a AUCUN endpoint et n'est PAS persistee (une feuille = un patient). -->
+    <div class="patientbox noprint">
+      <label for="f_patient">Patient</label>
+      <input id="f_patient" placeholder="Nom et prénom du patient" oninput="setPatient(this.value)"
+        autocomplete="off">
+      <span class="local">saisi localement, jamais transmis</span>
+    </div>
     <div id="feuille"></div>
     <p class="noprint" style="margin-top:var(--sp-4);display:flex;gap:var(--sp-2)">
       <button class="act" onclick="window.print()">Imprimer / PDF</button>
@@ -326,6 +371,10 @@ const REGIONS = [
 ];
 let profil = JSON.parse(localStorage.getItem('kine_profil')||'{}');
 let panier = [];      // {code,coef,tarif,libelle,article,referentiel,chirurgie,seance,region}
+// Identite du patient — CHOIX DE CONFORMITE, ne pas « ameliorer » en l'envoyant au
+// serveur : elle vit uniquement ici, en memoire, jamais transmise ni persistee.
+let patient = '';
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---- helpers cotation (miroir du moteur Python) ----
 const lettre = ()=> profil.drom ? KB._meta.valeur_lettre_cle_eur.drom : KB._meta.valeur_lettre_cle_eur.metropole;
@@ -507,7 +556,12 @@ function pickItem(kind,i){
 }
 function onDom(){document.getElementById('w_dom_wrap').classList.toggle('hidden',!document.getElementById('w_dom').checked);render();}
 function removeLigne(i){panier.splice(i,1);render();}
-function reset(){panier=[];document.getElementById('w_dom').checked=false;document.getElementById('w_dom_wrap').classList.add('hidden');closePicker();render();}
+// Patient : local uniquement. On re-rend la feuille pour propager le nom vers
+// l'en-tete imprime et la justification. La valeur ne part nulle part.
+function setPatient(v){ patient = v; render(); }
+function reset(){panier=[];document.getElementById('w_dom').checked=false;document.getElementById('w_dom_wrap').classList.add('hidden');
+  patient='';const pf=document.getElementById('f_patient');if(pf)pf.value='';   // une feuille = un patient
+  closePicker();render();}
 
 // ANTI-SOUS-COTATION — ce que l'outil peut faire, et ce qu'il ne DOIT pas faire.
 //
@@ -572,9 +626,10 @@ function render(){
     return;
   }
 
+  const patientLigne = patient.trim() ? `<div class="muted" style="margin-top:4px">Patient : <b>${esc(patient.trim())}</b></div>` : '';
   let h=`<div class="fh"><div>${enteteHTML()}</div>
     <div style="text-align:right"><div class="n">FEUILLE DE SOINS</div><div class="muted">Récapitulatif de cotation</div>
-    <div class="muted num">séance du ${today}</div></div></div>`;
+    <div class="muted num">séance du ${today}</div>${patientLigne}</div></div>`;
   // Palier CONDITIONNEL : jamais en silence. Risque asymetrique — si le palier
   // n'entre pas en vigueur et qu'on l'a applique, le kine SURCOTE (indu) ; s'il
   // entre en vigueur et qu'on l'ignore, il sous-cote (perte, sans risque legal).
@@ -605,6 +660,7 @@ function render(){
   // JUSTIFICATION = le produit. Elle epingle la VERSION DU BAREME : sans ca, une preuve
   // ne vaut rien (le bareme a change 3 fois en 8 mois). Cf. 05_REPOSITIONNEMENT_PREUVE.md.
   h+=`<div class="justif"><b>Justification (à conserver — anti-indu) :</b><br>`+
+     (patient.trim()?`Feuille établie le ${today} pour le patient <b>${esc(patient.trim())}</b>.<br>`:'')+
      panier.map(l=>`• ${l.code} ${l.coef} (art. ${l.article})${l.palier?(' [palier du '+frDate(l.palier)+']'):''} : `
        +`${l.libelle}${l.seance!=null?(' — séance n°'+l.seance):''}.`).join('<br>')+
      `<br>Pièces : ordonnance + BDK. Vérifier la cohérence soins ↔ prescription.
@@ -614,12 +670,137 @@ function render(){
   document.getElementById('feuille').innerHTML=h;
 }
 
-// ---- OCR (necessite le backend server.py) ----
-async function uploadOrdo(input){
+// ========================================================================
+//  CAVIARDAGE DE L'ORDONNANCE — donnee de sante, masquee AVANT tout envoi.
+//
+//  Principe non negociable : l'image ORIGINALE non masquee ne quitte JAMAIS le
+//  poste. Elle ne vit que dans `ordoImg` (en memoire) et dans les pixels du
+//  canvas. Seul `caviarderEtAnalyser()` produit un blob, et ce blob est celui du
+//  canvas APRES gravure des rectangles noirs -> la seule version qui part au
+//  cloud est la version masquee. Aucun blob de l'original n'est jamais cree.
+//
+//  Le kine masque nom / prenom / date de naissance / NIR du patient (le
+//  prescripteur peut rester). Geste universel : glisser (souris OU doigt), comme
+//  un outil de capture. Les rectangles sont GRAVES dans les pixels (fillRect),
+//  pas un overlay CSS qu'un envoi contournerait.
+// ========================================================================
+const CAV_MAXDIM = 2000;   // borne la resolution envoyee (memoire + poids du blob)
+let ordoImg=null, ordoCanvas=null, ordoCtx=null;
+let masques=[];            // {x,y,w,h} en pixels-canvas
+let curMask=null, cavDrawing=false;
+
+function onOrdoFile(input){
   const f=input.files[0]; if(!f) return;
   const panel=document.getElementById('ocrPanel');
-  panel.innerHTML='<div class="muted" style="margin-top:8px">Lecture de l\'ordonnance…</div>';
-  const fd=new FormData(); fd.append('ordonnance', f);
+  // PDF (ou tout non-image) : le canvas ne rend pas un PDF sans lib -> on refuse
+  // proprement plutot que d'envoyer un fichier non caviarde.
+  const estImage = /^image\/(png|jpe?g|webp)$/i.test(f.type) || /\.(png|jpe?g|webp)$/i.test(f.name);
+  if(!estImage){
+    panel.innerHTML='<div class="alert warn">Pour le caviardage, prends l\'ordonnance en photo '
+      +'(PNG / JPG / WebP). Le PDF n\'est pas supporté ici.</div>';
+    input.value=''; return;
+  }
+  const url=URL.createObjectURL(f);
+  const img=new Image();
+  img.onload=()=>{ URL.revokeObjectURL(url); ordoImg=img; masques=[]; curMask=null; buildCaviardage(); };
+  img.onerror=()=>{ URL.revokeObjectURL(url);
+    panel.innerHTML='<div class="alert warn">Image illisible — réessaie avec une photo nette.</div>'; };
+  img.src=url;
+}
+
+function buildCaviardage(){
+  const scale=Math.min(1, CAV_MAXDIM/Math.max(ordoImg.naturalWidth, ordoImg.naturalHeight));
+  const w=Math.max(1,Math.round(ordoImg.naturalWidth*scale)), hh=Math.max(1,Math.round(ordoImg.naturalHeight*scale));
+  document.getElementById('ocrPanel').innerHTML=
+    '<div class="cav">'
+    +'<div class="hint">Masque le <b>nom</b>, le <b>prénom</b> et la <b>date de naissance</b> du patient — '
+    +'glisse le doigt (ou la souris) dessus. Le prescripteur peut rester.</div>'
+    +'<div class="cavwrap"><canvas id="ordoCanvas" width="'+w+'" height="'+hh+'"></canvas></div>'
+    +'<div class="cavbar">'
+    +'<span class="pill cavcount" id="cavCount">0 masque</span>'
+    +'<span class="grow"></span>'
+    +'<button type="button" class="act ghost mini" onclick="undoMask()">Annuler le dernier masque</button>'
+    +'<button type="button" class="act ghost mini" onclick="clearMasks()">Tout effacer</button>'
+    +'</div>'
+    +'<div class="chk"><input type="checkbox" id="cavNone" onchange="updateCavBtn()">'
+    +'<label for="cavNone">Aucune info patient visible sur cette photo</label></div>'
+    +'<button type="button" id="cavGo" class="act" disabled onclick="caviarderEtAnalyser()" style="margin-top:var(--sp-2)">Caviarder et analyser</button>'
+    +'<div class="cavnote">La version originale non masquée reste en mémoire sur ce poste — '
+    +'elle n\'est envoyée nulle part. Seule l\'image masquée part à l\'analyse.</div>'
+    +'</div>';
+  ordoCanvas=document.getElementById('ordoCanvas');
+  ordoCtx=ordoCanvas.getContext('2d');
+  redrawOrdo();
+  attachCavEvents();
+  updateCavBtn();
+}
+
+// Redessine : image de fond + tous les masques graves (noir opaque) + le masque
+// en cours de trace. Appele a chaque mouvement -> trace « en direct ».
+function redrawOrdo(){
+  if(!ordoCtx) return;
+  ordoCtx.drawImage(ordoImg,0,0,ordoCanvas.width,ordoCanvas.height);
+  ordoCtx.fillStyle='#000';
+  masques.forEach(m=>ordoCtx.fillRect(m.x,m.y,m.w,m.h));
+  if(curMask) ordoCtx.fillRect(curMask.x,curMask.y,curMask.w,curMask.h);
+}
+
+// Convertit un evenement (souris ou tactile) en coordonnees-canvas.
+function cavPos(ev){
+  const rect=ordoCanvas.getBoundingClientRect();
+  const src=(ev.touches&&ev.touches[0])||(ev.changedTouches&&ev.changedTouches[0])||ev;
+  const sx=ordoCanvas.width/rect.width, sy=ordoCanvas.height/rect.height;
+  return {x:(src.clientX-rect.left)*sx, y:(src.clientY-rect.top)*sy};
+}
+function cavStart(ev){ ev.preventDefault(); cavDrawing=true; const p=cavPos(ev); curMask={x0:p.x,y0:p.y,x:p.x,y:p.y,w:0,h:0}; }
+function cavMove(ev){
+  if(!cavDrawing||!curMask) return; ev.preventDefault();
+  const p=cavPos(ev);
+  curMask.x=Math.min(curMask.x0,p.x); curMask.y=Math.min(curMask.y0,p.y);
+  curMask.w=Math.abs(p.x-curMask.x0); curMask.h=Math.abs(p.y-curMask.y0);
+  redrawOrdo();
+}
+function cavEnd(ev){
+  if(!cavDrawing) return; cavDrawing=false;
+  if(curMask && curMask.w>4 && curMask.h>4) masques.push({x:curMask.x,y:curMask.y,w:curMask.w,h:curMask.h});
+  curMask=null; redrawOrdo(); updateCavBtn();
+}
+// Souris ET tactile explicitement cables (le brief exige les deux gestes).
+function attachCavEvents(){
+  ordoCanvas.addEventListener('mousedown',cavStart);
+  window.addEventListener('mousemove',cavMove);
+  window.addEventListener('mouseup',cavEnd);
+  ordoCanvas.addEventListener('touchstart',cavStart,{passive:false});
+  ordoCanvas.addEventListener('touchmove',cavMove,{passive:false});
+  ordoCanvas.addEventListener('touchend',cavEnd);
+  ordoCanvas.addEventListener('touchcancel',cavEnd);
+}
+function undoMask(){ masques.pop(); redrawOrdo(); updateCavBtn(); }
+function clearMasks(){ masques=[]; redrawOrdo(); updateCavBtn(); }
+// GARDE-FOU : envoi impossible tant qu'aucun masque n'est pose, SAUF si le kine
+// atteste explicitement (case a cocher) qu'aucune info patient n'est visible.
+// Jamais d'envoi silencieux non caviarde.
+function updateCavBtn(){
+  const cnt=document.getElementById('cavCount'); if(cnt) cnt.textContent=masques.length+' masque'+(masques.length>1?'s':'');
+  const none=document.getElementById('cavNone'); const go=document.getElementById('cavGo');
+  if(go) go.disabled = !(masques.length>0 || (none&&none.checked));
+}
+
+function caviarderEtAnalyser(){
+  if(!ordoCanvas) return;
+  redrawOrdo();   // s'assure que le canvas porte bien tous les masques graves
+  // toBlob lit le canvas MASQUE -> le blob ne contient que la version noircie.
+  // A aucun moment on ne cree ni n'envoie un blob de l'image originale.
+  ordoCanvas.toBlob(blob=>{
+    const panel=document.getElementById('ocrPanel');
+    panel.innerHTML='<div class="muted" style="margin-top:8px">Lecture de l\'ordonnance…</div>';
+    const fd=new FormData(); fd.append('ordonnance', blob, 'ordonnance.png');   // meme endpoint, rien a changer cote serveur
+    sendOcr(fd, panel);
+  }, 'image/png');
+}
+
+// ---- OCR (necessite le backend server.py) ----
+async function sendOcr(fd, panel){
   try{
     const r=await fetch('/api/ocr',{method:'POST',body:fd});
     const data=await r.json().catch(()=>({}));
@@ -631,6 +812,9 @@ async function uploadOrdo(input){
 }
 function renderOcr(data){
   const e=data.extraction||{}, c=data.candidats||[];
+  // NB : on ignore volontairement tout `e.patient_nom` renvoye par l'OCR (vide dans
+  // le flux caviarde de toute facon) — l'identite patient est saisie localement et
+  // ne doit jamais etre ecrasee par une lecture cloud.
   let h='<div style="border:1px solid var(--accent-line);background:var(--accent-wash);border-radius:8px;padding:12px;margin-top:10px">';
   h+='<b style="font-size:12.5px">Ordonnance lue</b> <span class="pill">confiance '+(e.confiance||'?')+'</span>';
   h+='<div style="margin:6px 0;font-size:13px">'+(e.pathologie_texte||'')+'</div>';

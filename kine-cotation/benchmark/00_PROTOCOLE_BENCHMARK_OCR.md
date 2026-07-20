@@ -16,6 +16,11 @@ Pour ce benchmark :
 1. **Anonymiser chaque ordonnance AVANT la photo** : caviarder (feutre noir / bande) le **nom,
    prénom, date de naissance, NIR** du patient. On ne garde que le **contenu clinique**
    (pathologie, zone, nb séances, mentions). Le prescripteur peut rester.
+   > **MàJ 2026-07-20** — l'**app** caviarde désormais l'image **avant tout envoi** (masquage sur
+   > canvas dans l'étape « 00 Ordonnance » ; seule la version aux pixels noircis part à `/api/ocr`,
+   > cf. `07_UI_DESIGN.md` §3.8) : les conditions du benchmark sont donc **permanentes en production**,
+   > plus seulement une consigne manuelle. **Validation juriste toujours requise** avant données réelles
+   > (Enterprise + ZDR + DPA) — on ne re-tranche pas le droit ici.
 2. **Pas de stockage cloud** des images. Travail local, dossier supprimé après le benchmark.
 3. **Provider** : par défaut **Mistral** (éditeur français, serveurs UE) — cf. `llm.py` et
    `06_PROVIDER_IA.md`. Le benchmark sur images **anonymisées** ne requiert pas de ZDR.

@@ -108,11 +108,66 @@ rachis, c'est du bruit).
 - Mobile : la baseline marketing disparaît, **le badge barème reste** (c'est de la preuve).
 - Feuille `sticky` en desktop, focus visibles, impression = la feuille seule.
 
+### 3.8 Caviardage de l'ordonnance AVANT tout envoi (étape 00)
+**Le problème.** L'ordonnance est une **donnée de santé**. L'ancien flux (`uploadOrdo`) envoyait le
+fichier à `/api/ocr` **dès la sélection** — donc l'image nominative brute quittait le poste. Le
+protocole benchmark (`benchmark/00_PROTOCOLE_BENCHMARK_OCR.md` §0) exige de caviarder nom / prénom /
+date de naissance / NIR *avant la photo* ; en production, on ne peut pas compter là-dessus. On rend
+donc le caviardage **structurel dans l'app** : les conditions du benchmark deviennent permanentes.
+
+**Le flux.** Sélection d'une **image** (PNG/JPG/WebP) → aperçu plein largeur dans un `<canvas>` →
+l'utilisateur **glisse** (souris OU doigt) pour poser des rectangles **noirs opaques** → bouton
+explicite **« Caviarder et analyser »** → et **seulement là** l'image masquée part à `/api/ocr`.
+
+**Pourquoi canvas et pas overlay CSS.** Les rectangles sont **gravés dans les pixels** (`fillRect`),
+puis `canvas.toBlob()` → `FormData` (même endpoint, rien à changer côté serveur). Un overlay CSS
+serait cosmétique : le fichier envoyé resterait nominatif. Ici, **le blob EST la version masquée**.
+
+**Le principe non négociable, écrit dans le code.** L'image originale non masquée ne vit que dans
+`ordoImg` (mémoire) et dans les pixels du canvas. **Aucun blob de l'original n'est jamais créé** :
+`caviarderEtAnalyser()` est le seul producteur de blob, et il lit le canvas *après* gravure.
+
+**Intuitivité (le critère de succès d'Enzo).**
+- Geste universel (glisser = tracer un rectangle, comme un outil de capture), câblé en **souris ET
+  tactile** (`mousedown/move/up` + `touchstart/move/end`, `touch-action:none` pour ne pas scroller).
+- Microcopie au-dessus de l'aperçu : « Masque le **nom**, le **prénom** et la **date de naissance**…
+  Le prescripteur peut rester. » (tutoiement, cohérent avec le reste).
+- **Annuler le dernier masque** + **Tout effacer** (ghost). Pastille compteur (« 2 masques »).
+- **Garde-fou** : « Caviarder et analyser » est **désactivé tant qu'aucun masque n'est posé**. Une
+  case « Aucune info patient visible sur cette photo » débloque les cas déjà cadrés — **jamais**
+  d'envoi silencieux non caviardé.
+- **PDF refusé** proprement (« prends l'ordonnance en photo ») : le canvas ne rend pas les PDF sans
+  lib, et on ne veut pas d'échappatoire qui enverrait un fichier non masqué. `accept` limité aux images.
+
+### 3.9 Champ « Patient » — local, jamais transmis
+Un input **nom + prénom** dans l'en-tête de la feuille. Il alimente l'en-tête imprimé (« Patient : X »)
+et la justification (« Feuille établie le … pour le patient X »). **Choix de conformité, pas un oubli
+d'intégration** : la valeur vit dans l'état JS (`patient`), n'est envoyée à **aucun** endpoint et
+n'est **pas** persistée en `localStorage` (une feuille = un patient ; « Vider » la réinitialise).
+Microcopie discrète : « saisi localement, jamais transmis ». Le champ est **statique** (hors du bloc
+que `render()` reconstruit) pour ne pas perdre le focus à chaque frappe ; le nom imprimé, lui, est
+rendu dans `.fh` à partir de la variable. Le `patient_nom` que l'OCR pourrait renvoyer (vide dans le
+flux caviardé) est **volontairement ignoré** : une lecture cloud ne doit jamais écraser la saisie locale.
+
+> **Séparation des deux données de santé.** L'**image** part au cloud, mais **caviardée** ; l'**identité
+> patient** est saisie localement et **ne quitte jamais le poste**. Aucune des deux ne circule en clair.
+
 ---
 
 ## 4. Vérifications faites (pas des intentions)
 
 - **Contraste** — 9 combinaisons testées, **toutes ≥ 4.5:1** (min. 5.99 : accent sur carte ; max. 17.04).
+  Éléments du caviardage/patient revérifiés : consigne 13.08, microcopie/`saisi localement` 4.57,
+  compteur 8.23 (le panneau caviardage est passé sur fond `--card` — l'affordance est portée par la
+  bordure accent gauche, pas par une teinte de fond qui aurait fait tomber la microcopie à 4.39).
+- **Caviardage — le blob envoyé est bien masqué** (test navigateur, `fetch` intercepté sur
+  `syn_01_ptg_genou.png`) : 2 masques souris → le blob capté, redessiné, a des pixels **noirs (0,0,0)**
+  aux zones masquées et **préserve** le reste ; un seul `FormData` (champ `ordonnance`), **aucun blob de
+  l'original**. Compteur, annuler, tout-effacer, garde-fou (bouton désactivé sans masque, case débloquante),
+  refus PDF, geste **tactile** (`TouchEvent` réels) : tous vérifiés. Zéro erreur console.
+- **Patient local** — apparaît dans l'en-tête + la justification, **survit** à un changement de date de
+  séance, échappé (XSS), vidé par « Vider », et **absent de toute requête réseau** (le seul envoi est le
+  blob image).
 - **Non-régression** — les 22 IDs consommés par le JS sont présents après build.
 - **Parcours réel en navigateur** — région → segmenté (`w_chir='oui'`, filtre 15→9) → acte → séance.
 - **3 paliers DAP** sur l'arthroplastie du genou (seuil **26**) : séance 20 → `info`, 25 → `warn`, 30 → `danger`.

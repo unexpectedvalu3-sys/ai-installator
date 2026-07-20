@@ -20,6 +20,11 @@
 C'est le seul endroit du produit où une donnée de santé circule — moteur, KB et dossier de preuve
 sont 100 % locaux et déterministes.
 
+> **MàJ 2026-07-20** — l'app **caviarde l'image AVANT envoi** (masquage nom/prénom/date de naissance/NIR
+> sur canvas dans l'étape « 00 Ordonnance » ; seule la version masquée part au provider — cf.
+> `07_UI_DESIGN.md` §3.8). L'identité patient, elle, est saisie localement et **ne quitte jamais le poste**.
+> Ça durcit l'argument souveraineté mais **ne remplace pas** la validation juriste (Enterprise + ZDR + DPA).
+
 ---
 
 ## 2. Ce qui a été implémenté
