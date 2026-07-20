@@ -106,9 +106,13 @@ nav a#nav-out{color:var(--on-ink-muted);text-decoration:none;font-size:13px;padd
   border-radius:6px;transition:color var(--dur-1) var(--ease)}
 nav a#nav-out:hover{color:var(--on-ink)}
 /* mobile : le header ne doit pas manger l'ecran. La baseline est du marketing,
-   le barème est de la preuve -> on sacrifie la baseline, on garde le barème. */
+   le barème est de la preuve -> on sacrifie la baseline, on garde le barème.
+   En mode servi (http) un 3e item (Déconnexion) apparait dans le nav : titre +
+   barème + 3 items ne tiennent pas sur 375px. On autorise donc le header à wrapper
+   -> le nav (pastille compacte) passe sur sa propre ligne, aligné à droite, sans
+   jamais élargir le document. Le barème reste lisible sur la 1re ligne. */
 @media(max-width:640px){
-  header{padding:var(--sp-3) var(--sp-4);gap:var(--sp-2);flex-wrap:nowrap}
+  header{padding:var(--sp-3) var(--sp-4);gap:var(--sp-2);flex-wrap:wrap}
   header .sub{display:none}
   header h1{font-size:15px}
   .bareme{font-size:10px;padding:2px 7px;overflow:hidden;text-overflow:ellipsis}
@@ -392,8 +396,13 @@ button.act:disabled:hover{background:var(--line-strong)}
       <span class="local">saisi localement, jamais transmis</span>
     </div>
     <div id="feuille"></div>
-    <p class="noprint" style="margin-top:var(--sp-4);display:flex;gap:var(--sp-2)">
+    <p class="noprint" style="margin-top:var(--sp-4);display:flex;gap:var(--sp-2);flex-wrap:wrap">
       <button class="act" onclick="window.print()">Imprimer / PDF</button>
+      <!-- Copier pour VEGA : la double saisie est le frein n°1 (cf. 13_INTEGRATION_VEGA
+           voie C/D). Pas d'API VEGA -> presse-papiers optimise pour la re-saisie. Le
+           texte NE contient JAMAIS le nom du patient (un presse-papiers peut fuiter). -->
+      <button class="act ghost" id="btnVega" onclick="copierVega(this)"
+        title="Copie un bloc texte compact de la cotation, prêt à recopier dans VEGA (sans le nom du patient)">Copier la cotation</button>
       <button class="act ghost" onclick="reset()">Vider</button>
     </p>
   </div>
@@ -732,6 +741,66 @@ function render(){
       · lettre-clé ${eur(lettre())} · <b>barème en vigueur à la date de la séance (${today})</b></div>
       <i>Aide à la décision — proposition de cotation non télétransmise. Le praticien valide et reste responsable.</i></div>`;
   document.getElementById('feuille').innerHTML=h;
+}
+
+// ========================================================================
+//  COPIER POUR VEGA — presse-papiers optimise pour la re-saisie manuelle.
+//
+//  Il n'existe PAS d'API pour ecrire une cotation dans VEGA (cf. 13_INTEGRATION_
+//  VEGA §1 : aucune API publique). Le frein d'adoption n°1 = la double saisie. On
+//  reduit donc la friction (voie C/D) : un bloc texte compact, une ligne par acte,
+//  DAP si applicable, total. Regle de confidentialite : le nom du patient N'Y EST
+//  JAMAIS — un presse-papiers peut fuiter (autre appli, historique). L'identite
+//  reste locale (cf. 07_UI_DESIGN §3.9), seule la cotation part au presse-papiers.
+function texteVega(){
+  // Meme calcul que render() : deplacement inclus, meme total.
+  let dep=null;
+  if(document.getElementById('w_dom') && document.getElementById('w_dom').checked){
+    const km=parseInt(document.getElementById('w_km').value||'0'), t=document.getElementById('w_terrain').value;
+    dep=ligneDeplacement(km,t);
+  }
+  const allLignes = dep?panier.concat([dep]):panier;
+  if(!allLignes.length) return '';
+  if(dateHorsPerimetre(dateSeance)) return '';   // pas de cotation hors perimetre
+  const total=Math.round(allLignes.reduce((s,l)=>s+l.tarif,0)*100)/100;
+  const lignes=[];
+  lignes.push('Cotation séance du '+frDate(dateSeance));
+  panier.forEach(l=>{
+    lignes.push(l.code+' '+l.coef+' — '+l.libelle+' — '+eur(l.tarif)
+      +(l.conditionnel?' (sous réserve — palier conditionnel, vérifier SNMKR)':''));
+    // Sous-ligne DAP / prescription (« e » plein, pas d'exposant : champ VEGA = texte brut)
+    const ref=trouverRef(l);
+    if(ref){
+      const parts=[];
+      if(l.prescrites!=null) parts.push('Séances prescrites : '+l.prescrites);
+      if(l.seance!=null)     parts.push('séance n°'+l.seance);
+      if(l.seance!=null && l.seance>=ref.dap_des_seance) parts.push('⚠ DAP REQUISE');
+      parts.push('DAP dès la '+ref.dap_des_seance+'e séance');
+      lignes.push('  '+parts.join(' · '));
+    }
+  });
+  if(dep) lignes.push(dep.code+' — '+dep.libelle+' — '+eur(dep.tarif));
+  lignes.push('Total séance : '+eur(total));
+  lignes.push('Barème : '+KB._meta.source+' · base v'+KB._meta.version+' · lettre-clé '+eur(lettre()));
+  return lignes.join('\n');
+}
+// Retour visuel « Copié ✓ » 1,5 s. clipboard.writeText marche en contexte securise
+// (https + localhost) ; fallback textarea/execCommand pour file:// ou http non securise.
+function copierVega(btn){
+  const t=texteVega();
+  const flash=(txt)=>{ const old=btn.dataset.label||btn.textContent; btn.dataset.label=old;
+    btn.textContent=txt; btn.disabled=true;
+    setTimeout(()=>{ btn.textContent=old; btn.disabled=false; },1500); };
+  if(!t){ flash('Rien à copier'); return; }
+  const ok=()=>flash('Copié ✓');
+  const fallback=()=>{ try{
+      const ta=document.createElement('textarea'); ta.value=t;
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+      ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok();
+    }catch(e){ flash('Copie impossible'); } };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(ok).catch(fallback);
+  } else fallback();
 }
 
 // ========================================================================
