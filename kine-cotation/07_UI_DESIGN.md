@@ -115,9 +115,37 @@ protocole benchmark (`benchmark/00_PROTOCOLE_BENCHMARK_OCR.md` §0) exige de cav
 date de naissance / NIR *avant la photo* ; en production, on ne peut pas compter là-dessus. On rend
 donc le caviardage **structurel dans l'app** : les conditions du benchmark deviennent permanentes.
 
-**Le flux.** Sélection d'une **image** (PNG/JPG/WebP) → aperçu plein largeur dans un `<canvas>` →
-l'utilisateur **glisse** (souris OU doigt) pour poser des rectangles **noirs opaques** → bouton
-explicite **« Caviarder et analyser »** → et **seulement là** l'image masquée part à `/api/ocr`.
+**Le flux (itération 2 — l'app masque toute seule).** Sélection d'une **image** (PNG/JPG/WebP) →
+aperçu plein largeur dans un `<canvas>` → **détection locale** du bloc patient → l'aperçu apparaît
+**déjà masqué** aux zones détectées → le kiné **vérifie d'un regard**, corrige au besoin (glisser pour
+ajouter, « Annuler le dernier », « Tout effacer ») → bouton **« Analyser »** → et **seulement là**
+l'image masquée part à `/api/ocr`. Le dessin manuel de la brique 1 reste **intact** : c'est le filet
+de correction quand l'auto rate ou manque un bloc.
+
+**Détection 100 % locale au navigateur (jamais de fuite).** La détection tourne dans le navigateur via
+**tesseract.js** + le pack FR `tessdata_fast` (assets servis depuis `/static/tesseract/`, chargés
+**paresseusement** à la 1ʳᵉ image, worker réutilisé ensuite). L'image **non masquée** ne sort jamais du
+poste — **même pas vers notre backend** : la détection lit le canvas en mémoire, elle ne téléverse rien.
+On repère les **libellés imprimés** (« Patient », « Nom », « Prénom », « Né(e) le », « NIR », « N° SS »…)
+et on pré-pose un masque sur la **valeur à droite** du libellé (large à dessein : l'OCR photo est
+approximatif, mieux vaut masquer trop que trop peu) ; on masque aussi tout **motif type NIR** (13-15
+chiffres). Le prescripteur (RPPS 11 chiffres, « Dr … ») n'est **pas** une ancre → il reste visible.
+
+**Pourquoi confirm-first, et pas silencieux.** Les masques auto **comptent** comme masques (le bouton
+s'active), mais **l'envoi reste un geste explicite du kiné** — jamais d'auto-envoi. La donnée est de
+santé : la machine propose, l'humain valide. Tant que le taux d'acceptation sans retouche n'est pas très
+haut, on ne franchit pas le pas du tout-automatique.
+
+**Métrique de confiance (pour décider un jour du tout-automatique).** Compteur `localStorage`
+`kine_cav_stats {proposes, acceptes_sans_retouche}` (compteurs **seuls** — aucune donnée de santé),
+incrémenté à chaque envoi où l'auto a proposé ≥ 1 masque ; « accepté sans retouche » = le kiné n'a ni
+ajouté, ni annulé, ni tout effacé. Affiché discrètement dans **Mon profil** : « Caviardage auto : N/M
+acceptés sans retouche ».
+
+**Dégradation propre.** En `file://` (hors-ligne, `AUTO_OK=false`) ou si les assets ne chargent pas
+(catch), on retombe **exactement** sur le flux manuel de la brique 1, avec la microcopie d'origine et
+**zéro erreur console**. Si la détection tourne mais ne trouve **aucun** bloc (ordonnance manuscrite) :
+microcopie « aucun bloc patient détecté — masque-le toi-même » + flux manuel.
 
 **Pourquoi canvas et pas overlay CSS.** Les rectangles sont **gravés dans les pixels** (`fillRect`),
 puis `canvas.toBlob()` → `FormData` (même endpoint, rien à changer côté serveur). Un overlay CSS
@@ -132,10 +160,13 @@ serait cosmétique : le fichier envoyé resterait nominatif. Ici, **le blob EST 
   tactile** (`mousedown/move/up` + `touchstart/move/end`, `touch-action:none` pour ne pas scroller).
 - Microcopie au-dessus de l'aperçu : « Masque le **nom**, le **prénom** et la **date de naissance**…
   Le prescripteur peut rester. » (tutoiement, cohérent avec le reste).
-- **Annuler le dernier masque** + **Tout effacer** (ghost). Pastille compteur (« 2 masques »).
-- **Garde-fou** : « Caviarder et analyser » est **désactivé tant qu'aucun masque n'est posé**. Une
-  case « Aucune info patient visible sur cette photo » débloque les cas déjà cadrés — **jamais**
-  d'envoi silencieux non caviardé.
+- **Annuler le dernier masque** + **Tout effacer** (ghost). Pastille compteur (« 2 masques »). Pendant
+  la détection (~1-3 s), état visible sur le canvas (voile + spinner « Détection du bloc patient… »).
+- **Garde-fou** : **« Analyser »** est **désactivé tant qu'aucun masque n'est posé** (les masques
+  auto-proposés comptent). Une case « Aucune info patient visible sur cette photo » débloque les cas
+  déjà cadrés — **jamais** d'envoi silencieux non caviardé. Le bouton s'appelle « Analyser » (et non
+  « Caviarder et analyser ») : avec l'auto-proposition, le caviardage est un **état visible** sur
+  l'aperçu au-dessus, pas un geste à nommer.
 - **PDF refusé** proprement (« prends l'ordonnance en photo ») : le canvas ne rend pas les PDF sans
   lib, et on ne veut pas d'échappatoire qui enverrait un fichier non masqué. `accept` limité aux images.
 

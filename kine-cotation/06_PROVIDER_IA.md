@@ -24,6 +24,12 @@ sont 100 % locaux et déterministes.
 > sur canvas dans l'étape « 00 Ordonnance » ; seule la version masquée part au provider — cf.
 > `07_UI_DESIGN.md` §3.8). L'identité patient, elle, est saisie localement et **ne quitte jamais le poste**.
 > Ça durcit l'argument souveraineté mais **ne remplace pas** la validation juriste (Enterprise + ZDR + DPA).
+>
+> **MàJ 2026-07-20 (itér. 2)** — le caviardage est désormais **auto-proposé** : une détection OCR
+> **100 % locale au navigateur** (tesseract.js + pack FR `tessdata_fast`, servis depuis `/static/tesseract/`)
+> repère le bloc patient et pré-pose les masques ; l'image non masquée ne sort **même pas vers notre
+> backend**. Le kiné valide d'un geste (« Analyser »). C'est un **2ᵉ modèle OCR, purement local**, distinct
+> du provider cloud (Mistral) qui, lui, ne reçoit que l'image déjà masquée.
 
 ---
 

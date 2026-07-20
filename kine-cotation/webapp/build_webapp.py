@@ -247,6 +247,14 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
 .cavnote{font-size:11px;color:var(--ink-soft);margin-top:var(--sp-2)}
 button.act:disabled{background:var(--line-strong);color:var(--on-ink-muted);cursor:not-allowed}
 button.act:disabled:hover{background:var(--line-strong)}
+/* overlay « Détection du bloc patient… » : l'app masque toute seule, le kiné
+   valide d'un regard. Pendant l'OCR local (1-3 s) l'aperçu est voilé + spinner. */
+.cavov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:var(--sp-2);
+  background:rgba(14,28,25,.58);color:var(--on-ink);font-size:12.5px;text-align:center;
+  padding:var(--sp-3);line-height:1.35}
+.cavov .sp{width:15px;height:15px;border:2px solid var(--on-ink-line);border-top-color:var(--on-ink);
+  border-radius:50%;animation:cavspin .8s linear infinite;flex:none}
+@keyframes cavspin{to{transform:rotate(360deg)}}
 
 /* ---------- champ patient (en-tete de la feuille, STRICTEMENT local) ----------
    La valeur ne quitte jamais le poste : ni reseau, ni localStorage (une feuille =
@@ -296,6 +304,11 @@ button.act:disabled:hover{background:var(--line-strong)}
     <div class="chk"><input type="checkbox" id="p_drom"><label>Exercice en DROM-COM (lettre-clé 2,43 € au lieu de 2,21 €)</label></div>
     <p style="margin-top:var(--sp-5)"><button class="act" onclick="saveProfil()">Enregistrer</button>
       <span id="psaved" class="pill" style="display:none">✓ enregistré</span></p>
+    <hr class="sep">
+    <!-- Métrique de confiance du caviardage auto (compteurs seuls, AUCUNE donnée de
+         santé). Sert à décider un jour du tout-automatique : tant que le taux
+         d'acceptation sans retouche n'est pas très haut, on garde la validation. -->
+    <p class="muted" id="cavStats" style="font-size:11.5px;margin:0"></p>
   </div>
   <div class="card">
     <h2>Aperçu en-tête</h2>
@@ -473,7 +486,23 @@ function show(t){
   document.getElementById('tab-profil').classList.toggle('hidden',t!=='profil');
   document.getElementById('nav-cot').classList.toggle('on',t==='cotation');
   document.getElementById('nav-prof').classList.toggle('on',t==='profil');
-  if(t==='profil') loadProfilForm();
+  if(t==='profil'){ loadProfilForm(); renderCavStats(); }
+}
+// Métrique de confiance du caviardage auto — lue depuis localStorage (compteurs
+// seuls). Affichée discrètement dans le profil : « N/M acceptés sans retouche ».
+function renderCavStats(){
+  const el=document.getElementById('cavStats'); if(!el) return;
+  let s={}; try{ s=JSON.parse(localStorage.getItem('kine_cav_stats')||'{}'); }catch(e){}
+  const p=s.proposes||0, a=s.acceptes_sans_retouche||0;
+  el.innerHTML = p
+    ? ('Caviardage auto : <b>'+a+' / '+p+'</b> acceptés sans retouche.')
+    : 'Caviardage auto : aucune proposition mesurée pour l\'instant.';
+}
+function bumpCavStats(accepteSansRetouche){
+  let s={}; try{ s=JSON.parse(localStorage.getItem('kine_cav_stats')||'{}'); }catch(e){}
+  s.proposes=(s.proposes||0)+1;
+  if(accepteSansRetouche) s.acceptes_sans_retouche=(s.acceptes_sans_retouche||0)+1;
+  try{ localStorage.setItem('kine_cav_stats',JSON.stringify(s)); }catch(e){}
 }
 
 // ---- profil ----
@@ -718,11 +747,37 @@ function render(){
 //  prescripteur peut rester). Geste universel : glisser (souris OU doigt), comme
 //  un outil de capture. Les rectangles sont GRAVES dans les pixels (fillRect),
 //  pas un overlay CSS qu'un envoi contournerait.
+//
+//  ITERATION 2 — l'app masque toute seule, le kine valide d'un regard.
+//  Quand l'app est SERVIE (http) : a la selection d'une image, on lance une
+//  detection OCR 100 % LOCALE (tesseract.js + pack FR, charges paresseusement
+//  depuis /static/tesseract/). On repere les LIBELLES imprimes (« Patient »,
+//  « Nom », « Ne(e) le », « NIR », « N° SS »…) et on pre-pose un masque sur la
+//  VALEUR a droite du libelle ; on masque aussi tout motif type NIR (13-15
+//  chiffres). L'apercu apparait DEJA masque -> le kine verifie et clique.
+//  L'image NON masquee ne sort jamais du poste (meme pas vers notre backend) :
+//  la detection lit le canvas en memoire, rien n'est televerse pour ca.
+//  Le dessin manuel reste le filet : ajouter un masque manque, annuler, effacer.
+//  En file:// (hors-ligne) ou si les assets ne chargent pas -> flux manuel de la
+//  brique 1, inchange, sans erreur console.
 // ========================================================================
 const CAV_MAXDIM = 2000;   // borne la resolution envoyee (memoire + poids du blob)
 let ordoImg=null, ordoCanvas=null, ordoCtx=null;
 let masques=[];            // {x,y,w,h} en pixels-canvas
 let curMask=null, cavDrawing=false;
+
+// ---- detection auto (local) ----
+// URL ABSOLUE obligatoire : tesseract.js cree son worker depuis un blob: (origine
+// opaque) qui appelle importScripts() ; un chemin racine « /static/… » y est
+// invalide (pas d'origine pour le resoudre). location.origin corrige ca, et reste
+// bon en prod HTTPS.
+const TESS_BASE=location.origin+'/static/tesseract';
+// La detection a besoin du backend pour servir les assets -> seulement en http.
+// En file:// on degrade proprement vers le flux manuel.
+const AUTO_OK = location.protocol.indexOf('http')===0;
+let tessLoading=null;      // promesse singleton de creation du worker
+let autoCount=0;           // nb de masques auto-proposes pour l'image courante
+let cavRetouche=false;     // le kine a-t-il modifie les masques apres l'auto ?
 
 function onOrdoFile(input){
   const f=input.files[0]; if(!f) return;
@@ -737,20 +792,33 @@ function onOrdoFile(input){
   }
   const url=URL.createObjectURL(f);
   const img=new Image();
-  img.onload=()=>{ URL.revokeObjectURL(url); ordoImg=img; masques=[]; curMask=null; buildCaviardage(); };
+  img.onload=()=>{ URL.revokeObjectURL(url); ordoImg=img; masques=[]; curMask=null;
+    autoCount=0; cavRetouche=false; buildCaviardage(); };
   img.onerror=()=>{ URL.revokeObjectURL(url);
     panel.innerHTML='<div class="alert warn">Image illisible — réessaie avec une photo nette.</div>'; };
   img.src=url;
 }
 
+// Microcopie du bloc (id=cavHint), selon l'etat :
+const HINT_MANUEL='Masque le <b>nom</b>, le <b>prénom</b> et la <b>date de naissance</b> du patient — '
+  +'glisse le doigt (ou la souris) dessus. Le prescripteur peut rester.';
+const HINT_AUTO_OK='Aperçu <b>déjà masqué</b> aux zones patient détectées. Vérifie d\'un regard — '
+  +'ajoute un masque manquant en glissant, ou « Annuler le dernier ». Le prescripteur peut rester.';
+const HINT_AUTO_VIDE='<b>Aucun bloc patient détecté</b> — masque le <b>nom</b>, le <b>prénom</b> et la '
+  +'<b>date de naissance</b> toi-même en glissant dessus. Le prescripteur peut rester.';
+
 function buildCaviardage(){
   const scale=Math.min(1, CAV_MAXDIM/Math.max(ordoImg.naturalWidth, ordoImg.naturalHeight));
   const w=Math.max(1,Math.round(ordoImg.naturalWidth*scale)), hh=Math.max(1,Math.round(ordoImg.naturalHeight*scale));
+  // Hint initial : en mode auto on annonce la detection ; en manuel, la consigne d'origine.
+  const hint0 = AUTO_OK ? 'Détection du bloc patient…' : HINT_MANUEL;
+  const overlay = AUTO_OK
+    ? '<div class="cavov" id="cavOverlay"><span class="sp"></span><span>Détection du bloc patient…</span></div>'
+    : '';
   document.getElementById('ocrPanel').innerHTML=
     '<div class="cav">'
-    +'<div class="hint">Masque le <b>nom</b>, le <b>prénom</b> et la <b>date de naissance</b> du patient — '
-    +'glisse le doigt (ou la souris) dessus. Le prescripteur peut rester.</div>'
-    +'<div class="cavwrap"><canvas id="ordoCanvas" width="'+w+'" height="'+hh+'"></canvas></div>'
+    +'<div class="hint" id="cavHint">'+hint0+'</div>'
+    +'<div class="cavwrap"><canvas id="ordoCanvas" width="'+w+'" height="'+hh+'"></canvas>'+overlay+'</div>'
     +'<div class="cavbar">'
     +'<span class="pill cavcount" id="cavCount">0 masque</span>'
     +'<span class="grow"></span>'
@@ -759,7 +827,7 @@ function buildCaviardage(){
     +'</div>'
     +'<div class="chk"><input type="checkbox" id="cavNone" onchange="updateCavBtn()">'
     +'<label for="cavNone">Aucune info patient visible sur cette photo</label></div>'
-    +'<button type="button" id="cavGo" class="act" disabled onclick="caviarderEtAnalyser()" style="margin-top:var(--sp-2)">Caviarder et analyser</button>'
+    +'<button type="button" id="cavGo" class="act" disabled onclick="caviarderEtAnalyser()" style="margin-top:var(--sp-2)">Analyser</button>'
     +'<div class="cavnote">La version originale non masquée reste en mémoire sur ce poste — '
     +'elle n\'est envoyée nulle part. Seule l\'image masquée part à l\'analyse.</div>'
     +'</div>';
@@ -768,6 +836,101 @@ function buildCaviardage(){
   redrawOrdo();
   attachCavEvents();
   updateCavBtn();
+  // Auto-proposition : masquer tout seul, sans bloquer le geste manuel (le kine
+  // peut deja dessiner pendant que l'OCR tourne). Tout echec -> flux manuel.
+  if(AUTO_OK) lancerDetection();
+}
+
+// Charge tesseract.js + coeur WASM + pack FR PARESSEUSEMENT (uniquement ici, a la
+// 1re image), une seule fois, puis reutilise le worker. Aucun logger -> console
+// silencieuse. Rejet propre si un asset manque -> l'appelant degrade en manuel.
+function ensureTess(){
+  if(tessLoading) return tessLoading;
+  tessLoading=(async()=>{
+    if(typeof Tesseract==='undefined'){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src=TESS_BASE+'/tesseract.min.js'; s.onload=res;
+        s.onerror=()=>rej(new Error('tesseract indisponible'));
+        document.head.appendChild(s);
+      });
+    }
+    // OEM 1 = LSTM (coherent avec tessdata_fast). gzip:false : le pack FR est
+    // servi non compresse (fra.traineddata). Chemins 100 % locaux.
+    // corePath pointe le coeur EMBARQUE (.wasm.js, wasm inline) : evite un 2e fetch
+    // du .wasm que le worker (origine blob: opaque) ne saurait pas resoudre -> sinon
+    // gel a « initializing ». Self-hosted robuste.
+    return await Tesseract.createWorker('fra', 1, {
+      workerPath: TESS_BASE+'/worker.min.js',
+      corePath: TESS_BASE+'/tesseract-core-simd-lstm.wasm.js',
+      langPath: TESS_BASE, gzip: false,
+    });
+  })().catch(err=>{ tessLoading=null; throw err; });   // permet un retry a la prochaine image
+  return tessLoading;
+}
+
+async function lancerDetection(){
+  const canvasAuMoment=ordoCanvas;   // garde-fou : si l'image change entre-temps, on jette
+  try{
+    const worker=await ensureTess();
+    if(ordoCanvas!==canvasAuMoment) return;              // une autre image a ete chargee
+    // Reconnait le canvas courant (fond image, aucun masque grave a cet instant).
+    const {data}=await worker.recognize(ordoCanvas,{},{blocks:true});
+    if(ordoCanvas!==canvasAuMoment) return;
+    const zones=zonesPatient(data, ordoCanvas.width, ordoCanvas.height);
+    zones.forEach(z=>masques.push(z));
+    autoCount=zones.length;
+    const hint=document.getElementById('cavHint');
+    if(hint) hint.innerHTML = zones.length ? HINT_AUTO_OK : HINT_AUTO_VIDE;
+  }catch(e){
+    // Degradation propre : assets absents / OCR en echec -> flux manuel, zero erreur.
+    const hint=document.getElementById('cavHint'); if(hint) hint.innerHTML=HINT_MANUEL;
+  }finally{
+    const ov=document.getElementById('cavOverlay'); if(ov) ov.remove();
+    redrawOrdo(); updateCavBtn();
+  }
+}
+
+// Analyse la sortie OCR et rend des rectangles {x,y,w,h} (coords canvas) a masquer.
+// Deux regles : (1) libelle imprime reconnu -> masquer la VALEUR a sa droite,
+// jusqu'au bord (large a dessein : l'OCR photo est approximatif, mieux vaut trop
+// que trop peu) ; (2) motif type NIR (13-15 chiffres) ou qu'il soit.
+function zonesPatient(data, W, H){
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+  // Libelles patient. Volontairement PAS « rpps »/« am »/« docteur » (prescripteur).
+  const ANCRES=['patient','patiente','nom','prenom','ne','nee','naissance','nir',
+                'ss','secu','securite','sociale','assure','assuree','beneficiaire','matricule','insee'];
+  const lignes=[];
+  (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>lignes.push(l))));
+  const zones=[];
+  lignes.forEach(l=>{
+    const mots=l.words||[];
+    // Un libelle est une ancre situee dans la moitie GAUCHE (position d'etiquette).
+    // Evite de masquer un « ne »/« nom » qui trainerait dans le corps de texte.
+    let droiteAncre=null;
+    mots.forEach(wd=>{
+      const b=wd.bbox||{}; if(b.x0==null) return;
+      if(b.x0 > W*0.55) return;
+      if(ANCRES.indexOf(norm(wd.text))>=0)
+        droiteAncre = droiteAncre==null ? b.x1 : Math.max(droiteAncre,b.x1);
+    });
+    if(droiteAncre!=null){
+      const y0=l.bbox.y0, y1=l.bbox.y1, pad=Math.max(4,(y1-y0)*0.4);
+      const x=Math.max(0, droiteAncre+2);
+      zones.push({x:x, y:Math.max(0,y0-pad), w:Math.max(0,W-x), h:(y1-y0)+2*pad});
+    }
+    // Motif NIR : 13 chiffres (ou 15 avec la cle). RPPS = 11 chiffres -> ignore.
+    mots.forEach(wd=>{
+      const b=wd.bbox||{}; if(b.x0==null) return;
+      const chiffres=String(wd.text||'').replace(/\D/g,'');
+      if(chiffres.length>=13 && chiffres.length<=15){
+        const pad=Math.max(4,(b.y1-b.y0)*0.35);
+        zones.push({x:Math.max(0,b.x0-pad), y:Math.max(0,b.y0-pad),
+          w:(b.x1-b.x0)+2*pad, h:(b.y1-b.y0)+2*pad});
+      }
+    });
+  });
+  return zones;
 }
 
 // Redessine : image de fond + tous les masques graves (noir opaque) + le masque
@@ -797,7 +960,7 @@ function cavMove(ev){
 }
 function cavEnd(ev){
   if(!cavDrawing) return; cavDrawing=false;
-  if(curMask && curMask.w>4 && curMask.h>4) masques.push({x:curMask.x,y:curMask.y,w:curMask.w,h:curMask.h});
+  if(curMask && curMask.w>4 && curMask.h>4){ masques.push({x:curMask.x,y:curMask.y,w:curMask.w,h:curMask.h}); cavRetouche=true; }
   curMask=null; redrawOrdo(); updateCavBtn();
 }
 // Souris ET tactile explicitement cables (le brief exige les deux gestes).
@@ -810,8 +973,8 @@ function attachCavEvents(){
   ordoCanvas.addEventListener('touchend',cavEnd);
   ordoCanvas.addEventListener('touchcancel',cavEnd);
 }
-function undoMask(){ masques.pop(); redrawOrdo(); updateCavBtn(); }
-function clearMasks(){ masques=[]; redrawOrdo(); updateCavBtn(); }
+function undoMask(){ masques.pop(); cavRetouche=true; redrawOrdo(); updateCavBtn(); }
+function clearMasks(){ masques=[]; cavRetouche=true; redrawOrdo(); updateCavBtn(); }
 // GARDE-FOU : envoi impossible tant qu'aucun masque n'est pose, SAUF si le kine
 // atteste explicitement (case a cocher) qu'aucune info patient n'est visible.
 // Jamais d'envoi silencieux non caviarde.
@@ -823,6 +986,9 @@ function updateCavBtn(){
 
 function caviarderEtAnalyser(){
   if(!ordoCanvas) return;
+  // Metrique de confiance : ne compte que les envois OU l'auto a propose >=1 masque.
+  // « accepte sans retouche » = le kine n'a ni ajoute, ni annule, ni tout efface.
+  if(autoCount>0) bumpCavStats(!cavRetouche);
   redrawOrdo();   // s'assure que le canvas porte bien tous les masques graves
   // toBlob lit le canvas MASQUE -> le blob ne contient que la version noircie.
   // A aucun moment on ne cree ni n'envoie un blob de l'image originale.

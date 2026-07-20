@@ -16,10 +16,15 @@ Pre-requis : pip install -r ../requirements.txt  (flask, itsdangerous, mistralai
 Config : webapp/.env (voir .env.example) — jamais commite.
 """
 
+import mimetypes
 import os
 import sys
 import tempfile
 from pathlib import Path
+
+# WASM doit sortir en application/wasm (sinon avertissement console au chargement
+# du coeur tesseract). Certains Windows ne l'ont pas dans la base mimetypes.
+mimetypes.add_type("application/wasm", ".wasm")
 
 # charge webapp/.env AVANT d'importer auth (qui lit les variables au chargement)
 ICI = Path(__file__).resolve().parent
@@ -134,6 +139,20 @@ def logout():
 @app.route("/")
 def index():
     return send_from_directory(ICI, "kinecotation.html")
+
+
+# --------------------------------------------------------- assets tesseract.js
+# Servis SOUS /static/ (deja public dans le middleware _garde) pour que la
+# detection locale du bloc patient (caviardage auto-propose) puisse charger la
+# lib + le coeur WASM + le pack FR. Ces fichiers sont PUBLICS et inoffensifs :
+# c'est du code OCR generique, aucune donnee. L'image, elle, ne transite JAMAIS
+# par ici — la detection tourne 100 % dans le navigateur.
+_TESS_DIR = ICI / "assets" / "tesseract"
+
+
+@app.route("/static/tesseract/<path:fn>")
+def tesseract_asset(fn):
+    return send_from_directory(_TESS_DIR, fn)
 
 
 @app.route("/api/ocr", methods=["POST"])
