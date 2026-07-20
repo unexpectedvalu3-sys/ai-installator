@@ -144,33 +144,41 @@ L'axe que le synthétique (tapé) ne peut pas tester : **lire l'écriture cursiv
 (Teklia/RIMES-2011-line, MIT — lettres à des assureurs) et mesure le **CER** (taux d'erreur
 caractère). C'est le 1er filtre des candidats voie B **avant** GPU/ordonnances réelles.
 
-Comparaison **à quatre** (12 lignes RIMES, ordre déterministe) :
+### GRAND ÉCHANTILLON (2026-07-20) — corrige le petit
 
-| Modèle | CER moyen | précision | lignes <10 % |
-|---|---|---|---|
-| Claude Sonnet (chat/VLM) | **0,2 %** | 99,8 % | 12/12 |
-| **Mistral OCR 4** (`mistral-ocr-latest`, OCR dédié) | 1,3 % | 98,7 % | 12/12 |
-| **Qwen2.5-VL-7B LOCAL** (RTX 4070, gratuit) | **2,4 %** | 97,6 % | 11/12 |
-| Mistral medium (`mistral-medium-latest`, chat) | 19,6 % | 80,4 % | 0/12 |
+Le 1er test (12 lignes) était trop optimiste. Repris sur **100–200 lignes** (RIMES test = 704
+utilisables). `benchmark/rimes_aggregate.py` fait le face-à-face sur les lignes communes (ordre
+déterministe → `idx` aligné entre providers).
 
-**Deux enseignements majeurs :**
+| Modèle | n | CER moyen | médiane | p90 | max | <5 % | <10 % |
+|---|---|---|---|---|---|---|---|
+| Claude Sonnet (chat/VLM) | 100 | **0,94 %** | 0 % | 2,6 % | 18 % | 95 % | 96 % |
+| **Mistral OCR 4** (`mistral-ocr-latest`, OCR dédié) | 100 | **1,29 %** | 0 % | 5,0 % | 10 % | 90 % | 98 % |
+| **Qwen2.5-VL-7B LOCAL** (RTX 4070, gratuit) | 200 | **4,48 %** | 1,3 % | 11,4 % | 60 % | 73 % | 88 % |
+| Mistral medium (`mistral-medium-latest`, chat) | 12 | 19,6 % | 18 % | — | — | 0 % | 0 % |
 
-1. **Le modèle souverain gratuit (Qwen local) lit le cursif FR quasi sans faute** (2,4 %), au niveau des
-   meilleurs cloud. Il franchit **décisivement** le 1er filtre → signal fort que **la voie B est viable**.
-2. ⚠️ **NE PAS confondre le modèle chat et l'OCR dédié.** `mistral-medium` (le meilleur en *extraction*
-   du tapé, chirurgie 100 %) est **mauvais en manuscrit** (19,6 %). L'OCR de Mistral, c'est
-   **`mistral-ocr-4`** (1,3 %) — mais c'est un **endpoint séparé** (`/v1/ocr`) qui rend du *texte/markdown*,
-   PAS l'extraction JSON structurée. Donc voie A avec Mistral = **pipeline 2 temps** (OCR 4 transcrit →
-   un modèle texte extrait), OU un seul appel `mistral-medium` (bonne extraction, mauvais manuscrit).
+*(Face-à-face sur les 100 lignes communes : Qwen 3,9 %, Claude 0,94 %, Mistral OCR 1,29 % — même hiérarchie.)*
 
-**Ce que ça change pour l'archi** : Claude et **Qwen** font tout en **un seul appel VLM** (lisent le
-manuscrit ET extraient les champs). Mistral impose un choix (2 temps, ou un modèle faible sur un des
-2 axes). → **Qwen local gagne en simplicité ET en souveraineté** : un modèle, une passe, gratuit, sur
-site, bon sur les deux axes.
+**Ce que le grand échantillon révèle (et que 12 lignes cachaient) :**
 
-⚠️ **Nuance qui demeure** : RIMES = lettres manuscrites *propres*. Une ordonnance de médecin = gribouillis
-+ abréviations, plus dur. Tous ces scores chutent sur de la vraie écriture de médecin → seules les
-**vraies ordonnances de Malcom** tranchent le go/no-go final.
+1. **Qwen local n'est PAS à parité** — 4,5 % de CER contre ~1 % pour le cloud, soit **~4× plus
+   d'erreurs**, avec une **traîne** (p90 11 %, max 60 % : quelques lignes complètement ratées). Le
+   « 2,4 % » initial était un artefact de petit échantillon. **Médiane 1,3 %** quand même → la moitié
+   des lignes quasi parfaites, mais le tiers restant tire la moyenne.
+2. Le cloud OCR reste **excellent et régulier** : Claude 0,94 %, Mistral OCR 4 1,29 %.
+3. ⚠️ **NE PAS confondre chat et OCR dédié** : `mistral-medium` (meilleur en *extraction* du tapé) est
+   **mauvais en manuscrit** (19,6 %). L'OCR Mistral = `mistral-ocr-4`, **endpoint séparé** (`/v1/ocr`)
+   rendant du texte, pas du JSON → voie A Mistral = **pipeline 2 temps** (OCR transcrit → modèle extrait).
+
+**Verdict honnête sur voie A vs B** : le choix n'est plus « à parité » mais un **arbitrage** :
+- **Voie A (cloud)** : ~1 % CER, régulier — mais la donnée sort (contrat ZDR/HDS requis, cf. `10_`).
+- **Voie B (Qwen local)** : ~4,5 % CER + traîne de ratés — mais souverain, gratuit, un seul appel VLM
+  (lit ET extrait). L'avantage souveraineté/coût se paie d'un **coût réel de précision** sur le manuscrit.
+
+⚠️ **Et ça reste RIMES = lettres *propres*.** Sur du gribouillis de médecin, tous ces scores chutent, et
+l'écart Qwen↔cloud risque de **se creuser** (les petits modèles décrochent plus vite sur le bruit).
+Le go/no-go final = les **vraies ordonnances de Malcom**. Piste voie B si l'écart est rédhibitoire :
+fine-tuner un modèle open sur des ordonnances, ou réserver Qwen au **tapé** + cloud/saisie pour le manuscrit.
 
 ## 5. Reste à faire
 - Obtenir l'échantillon (15-20 ordonnances réelles anonymisées, manuscrites ET tapées).
