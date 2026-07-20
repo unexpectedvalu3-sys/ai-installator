@@ -18,6 +18,9 @@ yes
 kine-cotation/webapp/accounts.json
 accounts.json
 
+# fiche d'acces pilote (mot de passe en clair — jamais publie, a supprimer apres transmission)
+kine-cotation/webapp/PILOTE_ACCES_MALCOM.txt
+
 # sorties generees du benchmark (regenerables par run_batch/score)
 kine-cotation/benchmark/**/predictions.csv
 kine-cotation/benchmark/**/verite_terrain_modele.csv
