@@ -46,8 +46,9 @@ Un benchmark teste **deux axes distincts** — et une banque publique n'en couvr
 |---|---|---|---|
 | **Synthétique** (`prototype/make_test_ordonnance.py`) | Axe 2 **entier** + axe 1 sur le **tapé** + le prompt (JSON) | fictif, généré, **vérité terrain gratuite** | ✅ **à utiliser en 1er** (aucune donnée patient) |
 | **RIMES** (Teklia/RIMES-2011-line, HF) | Axe 1 : **manuscrit FR** (courriers, pas ordonnances) | MIT, recherche | ✅ **1er filtre manuscrit** des modèles candidats |
-| Kaggle « Doctor's Handwritten Prescription BD » (4680 img) | Axe 1 manuscrit médical, **non-FR**, noms de médicaments | ouvert | 🟠 lecture brute seulement (ni FR, ni kiné) |
-| Kaggle « Doctor Handwriting Recognition » (Pakistan, 90 img) · HF avi-kai (MIT, mots) | Axe 1, mots isolés, non-FR | ouvert / MIT | 🟠 idem |
+| **`MMMuzammil/Medical_Prescription_Handwritten_Words`** (HF, 46 img : 36 mots + 10 chiffres) | Axe 1 **manuscrit médical**, **non-FR** (noms de médicaments EN), mots isolés | **MIT** | ✅ **2ᵉ filtre licite utilisé** (2026-07-20) → `benchmark/doctor_handwriting.py`, cf. `11_` §4 quater |
+| Kaggle « Doctor's Handwritten Prescription BD » (4680 img) | Axe 1 manuscrit médical, **non-FR** | ouvert (Kaggle, auth requise) | 🟠 non testé (auth Kaggle) — miroirs HF sans licence explicite écartés (ligne rouge) |
+| Kaggle « Doctor Handwriting Recognition » (Pakistan, 90 img) · HF `chinmays18`, `Technoculture` (ordonnances entières) | Axe 1, non-FR | ouvert / **licence absente sur HF** | 🔴 écartés : **pas de licence explicite** (ligne rouge) |
 | **Ordonnances kiné FR (images)** | Axes 1+2 réels | **n'existe pas** en public | ❌ → vraies ordonnances anonymisées de Malcom |
 
 > ⚠️ **Ligne rouge** : n'utiliser QUE des jeux de recherche sous licence. **Ne jamais scraper** de

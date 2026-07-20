@@ -180,6 +180,74 @@ l'écart Qwen↔cloud risque de **se creuser** (les petits modèles décrochent 
 Le go/no-go final = les **vraies ordonnances de Malcom**. Piste voie B si l'écart est rédhibitoire :
 fine-tuner un modèle open sur des ordonnances, ou réserver Qwen au **tapé** + cloud/saisie pour le manuscrit.
 
+## 4 quater. Gribouillis médical RÉEL (mots manuscrits de médecin) — 2026-07-20
+
+RIMES teste l'écriture cursive FR sur des **lettres propres**. L'autre extrême — le
+« gribouillis de médecin » — se teste sur un jeu **licite** trouvé sur Hugging Face :
+**`MMMuzammil/Medical_Prescription_Handwritten_Words`** (licence **MIT**, **46 images**
+de **mots manuscrits** ; le nom du fichier = la vérité terrain). Contenu : **36 mots**
+(noms de médicaments : Amoxicillin, Paracetamol, Losartan, Metformin, Ibuprofen… + termes
+cliniques/posologie : Fever, Dosage, Twice, Before…) et **10 chiffres isolés** (0–9).
+Harnais : `benchmark/doctor_handwriting.py` (réutilise `cer`/`_norm`/OCR Mistral de
+`rimes_handwriting.py`) ; agrégation `benchmark/doctor_aggregate.py`.
+
+**Métrique adaptée** (ce ne sont pas des lignes mais des MOTS isolés) : le KPI est
+l'**exactitude MOT** — un nom de médicament est *bon ou faux*, un seul caractère erroné =
+mauvais médicament. Le CER **moyen brut est inexploitable ici** : sur un glyphe court, une
+sortie verbeuse fait exploser le ratio (>100 %). On rapporte donc l'exactitude mot + CER
+**médian** + CER moyen **plafonné à 100 %/image**.
+
+| Modèle | Voie | **MOTS** (36) | Chiffres isolés (10) | Global (46) | CER méd. | CER moy. plaf. |
+|---|---|---|---|---|---|---|
+| **Claude Sonnet** (chat/VLM) | A cloud | **94,4 %** (34/36) | 70 % (7/10) | 89,1 % | 0 % | 7,7 % |
+| **Qwen2.5-VL-7B LOCAL** (RTX 4070, gratuit) | **B** | **91,7 %** (33/36) | 30 % (3/10) | 78,3 % | 0 % | 17,7 % |
+| **Mistral OCR 4** (`mistral-ocr-latest`, OCR dédié) | A cloud | 83,3 % (30/36) | 20 % (2/10) | 69,6 % | 0 % | 31,3 % |
+
+**Ce que ça révèle — et qui NUANCE la prédiction de RIMES :**
+
+1. **Sur les MOTS médicaux, Qwen local est à quasi-parité avec Claude** (91,7 % vs 94,4 % —
+   1 mot d'écart) et **bat nettement Mistral OCR** (83,3 %). La hiérarchie RIMES (cloud >> Qwen)
+   **ne tient pas** sur le vocabulaire médical isolé : la lecture d'un mot s'appuie fortement sur
+   le **prior de langue** du VLM (Qwen « devine » un mot plausible), là où RIMES mesurait la
+   transcription caractère-à-caractère de phrases entières. En §4 ter on redoutait que l'écart
+   Qwen↔cloud **se creuse** sur le gribouillis : sur ces **mots**, il **ne se creuse pas**.
+2. **L'OCR dédié n'est PAS automatiquement meilleur.** `mistral-ocr-4`, excellent sur RIMES
+   (1,29 %), finit **dernier** ici : il abîme des noms (`Losartan`→`Lasartan`, `Vitamin`→`Vitamis`)
+   et surtout **hallucine du LaTeX/markdown** sur les glyphes ambigus (un « 7 » manuscrit → un tableau
+   de 1 à 99). Un endpoint OCR optimisé « document/ligne » se comporte mal sur des **imagettes
+   d'un seul mot**.
+3. **Point dur commun = les CHIFFRES isolés** (dose, nombre de séances). Tous chutent (Sonnet
+   70 %, Qwen 30 %, Mistral 20 %) : un chiffre manuscrit **sans contexte** est intrinsèquement
+   ambigu, et le prior de langue qui aide sur les mots **égare** sur un chiffre seul (Qwen lit
+   « Oxycodone » pour un « 0 »). ⚠️ **Signal produit** : la **posologie chiffrée** (nombre de
+   séances, doses) est le maillon faible de l'OCR manuscrit — à faire valider (cloud ou clic).
+
+**Limites à assumer (ce test NE dit PAS que le manuscrit FR est réglé) :**
+- **Langue = anglais/latin** (noms de médicaments), **pas le français**. Ça teste la lecture de
+  vocabulaire médical manuscrit, **pas** l'écriture cursive FR → **RIMES reste la référence FR**.
+- **Mots ISOLÉS**, pas des lignes ni des ordonnances entières : ni contexte, ni mise en page, ni
+  posologie complète (« 30 séances, 3×/semaine »). Une vraie ordonnance est plus dure.
+- Ces mots sont **relativement lisibles** (un scripteur, main soignée) — **pas** le gribouillis
+  multi-mots illisible du cliché. C'est un **plancher** (« sait-il lire du vocabulaire médical
+  net ? »), pas le cas le plus dur.
+- **n = 46 (36 mots)** : petit échantillon → **indicatif**, pas de p90 fiable.
+
+**Ce que ça change pour voie A / B / hybride :**
+- Renforce la **viabilité de la voie B** sur le sous-tâche « lire un mot médical » : Qwen local,
+  gratuit, ≈ Claude sur les noms de médicaments, et **au-dessus de l'OCR Mistral**. Un modèle open
+  souverain n'est pas disqualifié sur le lexique médical.
+- Mais la **faiblesse sur les chiffres** (30 % Qwen vs 70 % Sonnet) plaide pour un **hybride
+  ciblé** : OCR open pour le texte/lexique, **validation cloud ou humaine sur les nombres**
+  (posologie, séances) — cohérent avec le rôle « accélérateur, pas moteur » de l'OCR (§4).
+- **Ne déplace pas le go/no-go** : il faut toujours les **vraies ordonnances FR de Malcom**
+  (contexte + mise en page + français + posologie réelle). Ce test est un **2ᵉ filtre licite** qui
+  dit : « sur du vocabulaire médical manuscrit, Qwen tient tête à Claude, et l'OCR dédié n'est pas
+  un gage supérieur ».
+
+*(Rejouable : `KINE_LLM_PROVIDER=selfhosted KINE_LLM_BASE_URL=http://localhost:11434/v1
+KINE_LLM_MODELE=qwen2.5vl:7b python benchmark/doctor_handwriting.py` ; idem `anthropic`/`claude-sonnet-5`
+et `mistral-ocr`/`mistral-ocr-latest` ; puis `python benchmark/doctor_aggregate.py`.)*
+
 ## 5. Reste à faire
 - Obtenir l'échantillon (15-20 ordonnances réelles anonymisées, manuscrites ET tapées).
 - Monter une GPU HDS de test + vLLM (quelques heures ; coût GPU à l'heure, pas de contrat annuel pour tester).

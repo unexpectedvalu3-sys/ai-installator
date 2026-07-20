@@ -26,3 +26,6 @@ kine-cotation/benchmark/**/rapport_benchmark.csv
 
 # resultats RIMES par ligne (regenerables)
 kine-cotation/benchmark/rimes/*.csv
+
+# resultats gribouillis medical par image (regenerables)
+kine-cotation/benchmark/doctor/*.csv
