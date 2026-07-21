@@ -153,14 +153,12 @@ input:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3
 .x{color:var(--ink-faint);cursor:pointer;padding:0 4px;transition:color var(--dur-1) var(--ease)}
 .x:hover{color:var(--danger)}
 
-/* n° de seance : il PILOTE l'alerte DAP -> il est promu, pas planque */
-.seance{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:4px 8px;
-  background:var(--paper-2);border:1px solid var(--line);border-radius:6px}
+/* n° de seance ET nb prescrites : ils PILOTENT l'alerte DAP -> promus, editables.
+   'Prescrites' = saisissable a la main quand l'OCR echoue ou en flux manuel. */
+.seance{display:inline-flex;align-items:center;gap:6px 8px;flex-wrap:wrap;margin-top:6px;
+  padding:4px 8px;background:var(--paper-2);border:1px solid var(--line);border-radius:6px}
 .seance span{font-size:11px;color:var(--ink-soft)}
 .seance input{width:56px;padding:3px 6px;font-family:var(--mono);font-size:12.5px;text-align:center}
-/* nb de seances PRESCRITES (lu sur l'ordonnance) — distinct du n° de seance en cours */
-.presc{font-size:10.5px;color:var(--accent-deep);background:var(--accent-wash);
-  border:1px solid var(--accent-line);border-radius:4px;padding:2px 6px}
 
 /* ---------- alertes ---------- */
 .alert{border-radius:7px;padding:10px 12px;font-size:12.5px;margin-top:var(--sp-2);
@@ -578,6 +576,14 @@ function setSeance(idx,val){
   panier[idx].seance = /^\d+$/.test(n) ? parseInt(n) : null;
   render();
 }
+// Nb de seances PRESCRITES, editable a la main : si l'OCR echoue (ou en flux 100%
+// manuel), c'est le seul moyen de renseigner ce champ -> et c'est lui qui declenche
+// l'alerte anticipee « DAP a prevoir des la Xe seance » (cf. alerteDap). Vide = null.
+function setPrescrites(idx,val){
+  const n=String(val).trim();
+  panier[idx].prescrites = /^\d+$/.test(n) ? parseInt(n) : null;
+  render();
+}
 function openPicker(kind){
   const list = kind==='bilan'?KB.bilans:KB.supplements;
   const titre = kind==='bilan'?'Type de bilan (BDK)':'Supplément';
@@ -686,8 +692,10 @@ function render(){
   h+=`<table class="ftab"><thead><tr><th>Code</th><th>Coef</th><th>Acte</th><th class="r">Tarif</th><th class="noprint"></th></tr></thead><tbody>`;
   panier.forEach((l,idx)=>{
     const ref=trouverRef(l);
-    const presc = l.prescrites!=null ? `<span class="presc num" title="lu sur l'ordonnance">${l.prescrites} prescrites</span>` : '';
-    const inp = ref?`<div class="seance noprint"><span>Séance n°</span><input type="number" min="1" value="${l.seance!=null?l.seance:''}" oninput="setSeance(${idx},this.value)" placeholder="—">${presc}</div>`:'';
+    const inp = ref?`<div class="seance noprint">`
+      +`<span>Prescrites</span><input type="number" min="1" inputmode="numeric" data-fk="presc-${idx}" value="${l.prescrites!=null?l.prescrites:''}" oninput="setPrescrites(${idx},this.value)" placeholder="—" title="Nombre de séances prescrites sur l'ordonnance — à saisir si l'OCR ne l'a pas lu ; déclenche l'alerte « DAP à prévoir »">`
+      +`<span>Séance n°</span><input type="number" min="1" inputmode="numeric" data-fk="seance-${idx}" value="${l.seance!=null?l.seance:''}" oninput="setSeance(${idx},this.value)" placeholder="—" title="Numéro de la séance en cours">`
+      +`</div>`:'';
     h+=`<tr><td><b class="c">${l.code}</b></td><td class="num">${l.coef}</td><td>${l.libelle}${inp}</td><td class="r">${eur(l.tarif)}</td>
       <td class="noprint"><span class="x" onclick="removeLigne(${idx})">✕</span></td></tr>`;
   });
@@ -705,7 +713,17 @@ function render(){
       <div class="src">Barème appliqué : ${KB._meta.source} · base v${KB._meta.version}
       · lettre-clé ${eur(lettre())} · <b>barème en vigueur à la date de la séance (${today})</b></div>
       <i>Aide à la décision — proposition de cotation non télétransmise. Le praticien valide et reste responsable.</i></div>`;
-  document.getElementById('feuille').innerHTML=h;
+  // Les inputs Prescrites/Séance sont DANS le tableau reconstruit a chaque frappe
+  // (oninput -> render). Sans ca, le focus saute apres chaque chiffre -> impossible
+  // de taper « 30 ». On memorise l'input actif (data-fk) et on le restaure.
+  const feuille=document.getElementById('feuille');
+  const ae=document.activeElement;
+  const fk=(ae&&ae.dataset&&ae.dataset.fk&&feuille.contains(ae))?ae.dataset.fk:null;
+  feuille.innerHTML=h;
+  if(fk){
+    const el=feuille.querySelector('[data-fk="'+fk+'"]');
+    if(el){ el.focus(); try{ el.setSelectionRange(el.value.length,el.value.length); }catch(e){} }
+  }
 }
 
 // ========================================================================

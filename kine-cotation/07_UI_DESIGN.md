@@ -101,6 +101,16 @@ barème appliqué serait précisément l'incohérence silencieuse qui produit un
 Les paliers à venir ne sont annoncés que **pour la région affichée** (annoncer les 5 NMI à un kiné du
 rachis, c'est du bruit).
 
+### 3.6 bis « Prescrites » éditable (fallback OCR + flux manuel)
+Le nombre de séances **prescrites** pilote l'alerte anticipée « DAP à prévoir ». Il n'était rempli
+que par l'OCR (badge lecture seule) → en **flux manuel** ou si l'**OCR échoue sur ce champ**,
+l'anticipation ne se déclenchait jamais. Le badge devient un **input éditable** (à côté de « Séance n° »),
+pré-rempli par l'OCR, saisissable à la main sinon. `setPrescrites` miroir de `setSeance`.
+**Piège résolu** : ces inputs vivent dans le tableau reconstruit à chaque frappe (`oninput → render`) →
+le focus sautait après chaque chiffre. `render()` mémorise l'input actif (`data-fk`) et le restaure —
+on peut taper « 30 » d'affilée. Vérifié : les 3 paliers d'alerte (prévoir/silence/requise), focus
+préservé, mobile 375 (le conteneur `.seance` passe en `flex-wrap`).
+
 ### 3.7 Détails
 - États vides utiles (`01 — Choisis une région…`) plutôt que du blanc.
 - Copie **non directionnelle** (« Choisis une région, puis l'acte réalisé » et non « à gauche » :

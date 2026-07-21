@@ -53,8 +53,12 @@ permet d'utiliser l'outil l'esprit tranquille pendant le pilote.
    (*Opéré / Non opéré*, *Au référentiel / Hors référentiel*) : un clic, la liste d'actes se réduit
    à **ce qui te concerne**.
 3. **Clique l'acte réalisé.** Il s'ajoute à la feuille avec son coefficient et son tarif.
-4. **Le n° de séance** (sous la ligne de l'acte) : indique où tu en es (séance 1, 12, 30…). Il
-   **déclenche l'alerte DAP**.
+4. **Deux petits champs sous la ligne de l'acte** (pour les actes au référentiel HAS) :
+   - **Prescrites** = le nombre de séances écrit sur l'ordonnance. L'OCR le remplit tout seul ;
+     **s'il l'a raté (ou si tu n'as pas scanné l'ordonnance), saisis-le à la main.** C'est lui qui
+     déclenche l'alerte anticipée « DAP à prévoir dès la Xᵉ séance ».
+   - **Séance n°** = où tu en es aujourd'hui (séance 1, 12, 30…). C'est lui qui déclenche l'alerte
+     **DAP REQUISE** quand tu atteins le seuil.
 
 ### L'alerte DAP — ta sécurité anti-indu
 Quand une **Demande d'Accord Préalable** est requise, une bannière s'affiche **en haut de la
@@ -62,8 +66,8 @@ feuille** :
 - **orange** = elle approche (anticipe le bilan) ;
 - **rouge « ⚠ DAP REQUISE »** = tu es à/au-delà du seuil : ne facture pas sans DAP.
 
-Si l'app a lu le nombre de séances prescrites, elle te prévient **dès la 1ʳᵉ séance** qu'une DAP
-tombera plus loin. C'est un plan de charge, pas un reproche.
+Si le nombre de séances prescrites est renseigné (par l'OCR **ou saisi à la main dans « Prescrites »**),
+l'app te prévient **dès la 1ʳᵉ séance** qu'une DAP tombera plus loin. C'est un plan de charge, pas un reproche.
 
 ---
 
