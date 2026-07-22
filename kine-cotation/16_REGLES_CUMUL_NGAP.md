@@ -60,6 +60,17 @@ que l'alerte DAP.
 
 ---
 
+### 3 bis. Décision — PAS de calcul « 2ᵉ acte à 50 % » automatique (2026-07-22)
+Question Enzo : faut-il un bouton pour coter le 2ᵉ acte à 50 % (art. 11B) ? **Non, pas maintenant**,
+pour 2 raisons :
+1. **Maia (le facturier) le fait** — il applique le 11B à la télétransmission. Notre app est aide à la
+   décision + preuve, pas le facturier ; « Copier la cotation » donne les codes, Maia calcule.
+2. **On ignore QUAND le cumul est permis** (le 11B est l'exception, pas la règle). Un bouton 50 % dirait
+   implicitement « cumule, divise par deux » → il transformerait l'alerte anti-indu en outil qui
+   *facilite* l'indu. Ligne à ne pas franchir.
+**Condition pour revenir dessus** : si une session Malcom/ameli confirme des cas précis de cumul
+légitime, alors ajouter le 50 % pour rendre notre total + notre preuve cohérents avec le facturé. Pas avant.
+
 ## 4. Reste à confirmer (avant toute règle DURE) — action Enzo/kiné
 - Cumul **BDK + séance** le même jour : oui/non/conditions.
 - Périmètre exact de l'**article 11B** en kiné (dans quels cas un 2ᵉ acte est permis à 50 %).
