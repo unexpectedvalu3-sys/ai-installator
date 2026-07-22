@@ -33,6 +33,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 try:
@@ -230,18 +231,83 @@ def _mots(txt: str) -> set:
     return {w for w in txt.split() if len(w) > 3 and w not in STOP}
 
 
+# Synonymes anatomiques/pathologiques -> region de la base. INDISPENSABLE : une vraie
+# ordonnance ecrit « lombaire », la base dit « lombalgie / lombo / rachis » -> le matching
+# par mots EXACTS rend 0 acte (mesure sur la 1re vraie ordonnance de Malcom, 2026-07-22 :
+# zone lue « lombaire », zero acte propose). On mappe donc la zone + la patho lues vers une
+# region, et on propose les actes de cette region meme sans mot commun exact.
+REGION_SYNONYMES = {
+    "rachis": ["rachis", "lombaire", "lombalgie", "lombo", "lombosacr", "lumbago", "dorsal",
+               "dorso", "cervical", "cervicalgie", "cervico", "vertebr", "sciatique",
+               "sciatalgie", "cruralgie", "disc", "hernie", "scoliose", "spondyl", "dos"],
+    "membre_inf": ["membre inf", "genou", "hanche", "coxo", "cheville", "pied", "cuisse",
+                   "jambe", "tibia", "femur", "femoro", "rotul", "patell", "menisq",
+                   "ligament croise", "lca", "achille", "talon", "orteil", "malleol",
+                   "gonarthrose", "coxarthrose", "ptg", "pth", "arthroplastie du genou",
+                   "arthroplastie de hanche", "prothese de genou", "prothese de hanche"],
+    "membre_sup": ["membre sup", "epaule", "scapul", "coude", "poignet", "main", "avant-bras",
+                   "avant bras", "doigt", "coiff", "rotateur", "humerus", "carpien",
+                   "canal carpien", "radius", "cubital", "pouce", "epicondyl", "clavicul"],
+    "respiratoire": ["respiratoire", "bronch", "bpco", "pulmonaire", "desencombr", "poumon",
+                     "asthm", "mucoviscidose", "kine respi", "encombrement"],
+    "neuro_musculaire": ["neuro", "hemipleg", "parapleg", "tetrapleg", "avc", "myopath",
+                         "sclerose", "parkinson", "paralys", "encephalopath", "radiculaire",
+                         "tronculaire", "hemiplegie", "sep"],
+    "vasculaire": ["vasculaire", "lymphoedeme", "lymphatique", "oedeme", "veineux", "drainage lymphatique"],
+    "abdo_perineo": ["perine", "perineal", "abdomin", "uro-gyneco", "post-partum", "post partum",
+                     "incontinence", "reeducation perineale"],
+    "rhumato_inflammatoire": ["rhumatisme inflammatoire", "polyarthrit", "spondylarthrit"],
+    "maxillo_orl": ["maxillo", "temporo-mandibul", "mandibul", "paralysie faciale", "atm"],
+    "geriatrie": ["deambulation", "personne agee", "geriatr"],
+    "amputation": ["amputation", "ampute", "moignon", "appareillage"],
+    "brulures": ["brulure", "brule"],
+    "palliatif": ["palliatif", "soins palliatifs"],
+}
+
+
+def _sansacc(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", (s or "").lower())
+                   if unicodedata.category(c) != "Mn")
+
+
+def deduire_region(ordo: Ordonnance):
+    """Region de la base la plus plausible d'apres zone + patho + specialite lues.
+    Rend la region (str) ou None. Robuste au vocabulaire : « lombaire » -> « rachis »."""
+    txt = _sansacc(" ".join([ordo.zone or "", ordo.pathologie_texte or "", ordo.specialite or ""]))
+    if not txt.strip():
+        return None
+    meilleure, nmax = None, 0
+    for region, syns in REGION_SYNONYMES.items():
+        n = sum(1 for s in syns if _sansacc(s) in txt)
+        if n > nmax:
+            meilleure, nmax = region, n
+    return meilleure
+
+
+def _stems(mots, n=4):
+    return {w[:n] for w in mots if len(w) >= n}
+
+
 def proposer_actes(ordo: Ordonnance, kb):
-    """Matching deterministe par mots-cles : texte clinique -> actes du catalogue officiel."""
+    """Texte clinique -> actes du catalogue. Combine 3 signaux, du plus fort au plus
+    faible : mots-cles EXACTS, REGION deduite (synonymes), et RACINES de 4 lettres
+    (« lombaire » ~ « lombalgie »). Sans la region, une vraie ordonnance rend 0 acte."""
     mots = _mots(ordo.pathologie_texte) | _mots(ordo.zone) | _mots(ordo.specialite)
+    stems = _stems(mots)
     chir = {"oui": True, "non": False}.get(ordo.chirurgie)  # None si inconnu
+    region = deduire_region(ordo)
 
     scores = []
     for a in kb["actes"]:
-        score = len(mots & _mots(a["libelle"]))
+        amots = _mots(a["libelle"])
+        score = len(mots & amots)                       # mots exacts (fort)
+        if region and a.get("region") == region:
+            score += 1                                  # region deduite (fait remonter la zone)
+        score += 0.4 * len(stems & _stems(amots))       # racines partagees (lomb ~ lomb)
         if score == 0:
             continue
         if chir is not None and a["chirurgie"] == chir:
-            score += 0.5  # bonus coherence chirurgie
+            score += 0.5                                # bonus coherence chirurgie
         scores.append((score, a))
     scores.sort(key=lambda x: -x[0])
     return [a for _, a in scores]
