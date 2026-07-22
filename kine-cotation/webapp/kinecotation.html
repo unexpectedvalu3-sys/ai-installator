@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KinéCotation — cotation NGAP défendable</title>
+<!-- PWA : installable comme une app (Android + iOS). Le manifest et le SW ne
+     sont servis qu'en mode HTTP (backend) ; en file:// ces liens sont inertes. -->
+<meta name="theme-color" content="#0E1C19">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KinéCotation">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon-180.png">
 <style>
 
 @font-face{font-family:'Plex';font-weight:400;font-style:normal;font-display:swap;
@@ -1127,6 +1136,15 @@ if(location.protocol.indexOf('http')===0) document.getElementById('nav-out').sty
 const _wd=document.getElementById('w_date');
 _wd.value=dateSeance; _wd.min=KB._meta.applicable_depuis||'';
 fillRegions(); renderActes(); render();
+
+// ---- PWA : enregistrement du service worker ----
+// Uniquement en mode SERVI (http/https) : en file:// il n'y a pas de SW.
+// Non bloquant (apres load) ; echec silencieux (l'app marche sans).
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+  });
+}
 </script>
 </body>
 </html>

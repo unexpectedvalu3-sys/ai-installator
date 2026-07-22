@@ -44,7 +44,7 @@ import auth                        # noqa: E402
 app = Flask(__name__)
 KB = ce.charger_kb()
 EXT_OK = {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
-PUBLIC = {"/login", "/logout", "/healthz"}
+PUBLIC = {"/login", "/logout", "/healthz", "/manifest.webmanifest", "/sw.js"}
 
 
 # ------------------------------------------------------------------ page login
@@ -153,6 +153,36 @@ _TESS_DIR = ICI / "assets" / "tesseract"
 @app.route("/static/tesseract/<path:fn>")
 def tesseract_asset(fn):
     return send_from_directory(_TESS_DIR, fn)
+
+
+# ------------------------------------------------------------------- PWA
+# Manifest + service worker + icones : PUBLICS (sans login) — sinon l'install
+# de l'app echoue. On NE dé-garde PAS l'app elle-meme (« / » reste login-gardee).
+_ICONS_DIR = ICI / "assets" / "icons"
+
+
+@app.route("/manifest.webmanifest")
+def manifest():
+    resp = make_response(send_from_directory(ICI, "manifest.webmanifest"))
+    resp.headers["Content-Type"] = "application/manifest+json; charset=utf-8"
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
+
+
+@app.route("/sw.js")
+def service_worker():
+    resp = make_response(send_from_directory(ICI, "sw.js"))
+    # Content-Type explicite + scope racine : le SW doit pouvoir controler « / ».
+    resp.headers["Content-Type"] = "text/javascript; charset=utf-8"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    # jamais mis en cache navigateur : le SW doit rester rafraichissable.
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+@app.route("/static/icons/<path:fn>")
+def icon_asset(fn):
+    return send_from_directory(_ICONS_DIR, fn)
 
 
 @app.route("/api/ocr", methods=["POST"])

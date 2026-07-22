@@ -69,6 +69,32 @@ monter un disque et pointer `KINE_ACCOUNTS_FILE` vers un `accounts.json` persist
 
 ---
 
+## PWA — installer comme une app (icône sur le téléphone)
+
+L'app est **installable** : Malcom peut l'épingler sur son écran d'accueil et l'ouvrir en
+plein écran (standalone, sans barre d'URL), Android **et** iOS. Pas d'APK, pas de store — c'est
+la page web qui s'installe. **Nécessite l'URL STABLE hébergée** (HTTPS) : le tunnel éphémère
+(Cloudflare/quick) ne convient pas pour un usage durable, l'URL change à chaque relance.
+
+**Android (Chrome)** : ouvrir `https://<ton-app>/`, se connecter → menu `⋮` → **« Installer
+l'application »** (ou « Ajouter à l'écran d'accueil »). L'icône « K » pétrole apparaît ;
+au lancement, l'app s'ouvre en plein écran.
+
+**iOS (Safari — obligatoirement Safari, pas Chrome)** : ouvrir `https://<ton-app>/` →
+bouton **Partager** (carré avec flèche) → **« Sur l'écran d'accueil »** → *Ajouter*.
+
+**Sous le capot** (rien à faire, déjà en place) :
+- `/manifest.webmanifest` (nom, icônes 192/512 + maskable, `display: standalone`, thème encre `#0E1C19`) ;
+- `/sw.js` : service worker **prudent et auth-aware** — il ne met en cache QUE les assets publics
+  immuables (`/static/…` : cœur OCR, icônes). La page gardée par login, `/login`, `/api/*` (OCR)
+  passent **toujours au réseau** : rien de santé ni d'auth n'est mis en cache. En ouverture directe
+  `file://`, le SW ne s'enregistre pas — l'app marche comme avant.
+
+Les deux (manifest, sw.js) sont servis **sans login** (sinon l'install échoue) ; l'app elle-même
+reste gardée. Icônes régénérables : `python build_icons.py`.
+
+---
+
 ## OCR en phase de test — la règle (cf. `06_PROVIDER_IA.md`, `benchmark/00_PROTOCOLE §0`)
 
 Malcom **peut** utiliser l'OCR **sur ordonnances ANONYMISÉES uniquement** : caviarder nom, prénom,

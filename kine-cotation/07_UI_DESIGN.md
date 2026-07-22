@@ -214,6 +214,7 @@ flux caviardé) est **volontairement ignoré** : une lecture cloud ne doit jamai
 - **3 paliers DAP** sur l'arthroplastie du genou (seuil **26**) : séance 20 → `info`, 25 → `warn`, 30 → `danger`.
   *(Au passage : j'avais supposé un seuil de 16, c'était 26. Le moteur avait raison, pas moi.)*
 - **Mobile 375×812** : une colonne, header sur une ligne, aucun débordement horizontal.
+- **PWA installable** — manifest (icône monogramme « K » blanc sur pétrole `#0B6E5F`, coins arrondis + variante *maskable*), `theme-color` encre `#0E1C19`, service worker prudent (cache-first sur `/static/` public uniquement, réseau pour tout le reste). Vérifié en navigateur : SW actif au scope `/`, manifest 200 sans login, l'app reste gardée. Détail installation → `09_HEBERGEMENT.md`.
 
 ## 5. Reste à faire
 - **Export du dossier de preuve** (fichier autonome, sérialisation canonique stable → hashable).
