@@ -722,6 +722,21 @@ function render(){
       +`modification préalable de la liste des actes », et exposée au comité d'alerte ONDAM — `
       +`précédent du gel de juillet 2025). <b>Vérifie le tableau SNMKR en vigueur avant de facturer.</b></div>`;
   }
+  // CUMUL — regle NGAP officielle : « une seule cotation par seance, correspondant au
+  // traitement de la pathologie ou du territoire anatomique en cause » (cf.
+  // 16_REGLES_CUMUL_NGAP.md, source ameli). L'app additionnait sans avertir -> total
+  // potentiellement illegal = l'indu qu'on promet d'eviter. On ALERTE (ne bloque pas,
+  // ne recalcule pas : l'application de l'exception art. 11B a 50% reste a cadrer).
+  // On ne compte QUE les actes de reeducation (region != null) ; bilans/supplements
+  // (region == null) et deplacement se cumulent -> exclus. Garde-fou sur le CERTAIN.
+  const reeduc = panier.filter(l=>l.region);
+  if(reeduc.length>=2){
+    h+=`<div class="alert warn"><b>⚠ Cumul à vérifier</b> — tu as <span class="num">${reeduc.length}</span> actes de `
+      +`rééducation (${reeduc.map(l=>l.code+' '+l.coef).join(', ')}). En principe, <b>une seule rééducation se cote `
+      +`par séance</b> (NGAP : une seule cotation par séance). Pour plusieurs zones, un acte « plusieurs territoires » `
+      +`(art. 1D) existe. Sinon c'est une exception (art. 11B, 2ᵉ acte à 50 %) — le total ci-dessous les additionne `
+      +`à 100 %, <b>à corriger si le cumul n'est pas permis</b>.</div>`;
+  }
   // les alertes DAP sont le coeur anti-indu : en HAUT, pas en pied de page
   alertes.filter(a=>a.lvl!=='info').forEach(a=>h+=`<div class="alert ${a.lvl}">${a.msg}</div>`);
   h+=`<table class="ftab"><thead><tr><th>Code</th><th>Coef</th><th>Acte</th><th class="r">Tarif</th><th class="noprint"></th></tr></thead><tbody>`;
