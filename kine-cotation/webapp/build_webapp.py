@@ -1156,8 +1156,7 @@ document.querySelectorAll('.seg').forEach(seg=>{
     renderActes();
   });
 });
-document.getElementById('bareme').textContent =
-  'barème v'+KB._meta.version+' · lettre-clé '+eur(lettre());
+document.getElementById('bareme').textContent = 'v'+KB._meta.version;
 // Deconnexion : seulement en mode SERVI (http). En file:// c'est un lien mort -> masque.
 if(location.protocol.indexOf('http')===0) document.getElementById('nav-out').style.display='';
 const _wd=document.getElementById('w_date');
