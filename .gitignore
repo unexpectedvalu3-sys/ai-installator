@@ -36,3 +36,6 @@ kine-cotation/benchmark/rimes/*.csv
 
 # resultats gribouillis medical par image (regenerables)
 kine-cotation/benchmark/doctor/*.csv
+
+# vraies ordonnances (donnees de sante, meme caviardees) — JAMAIS commitees
+kine-cotation/benchmark/reel/
