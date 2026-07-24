@@ -1,0 +1,73 @@
+name: Release KinéCotation
+
+# Se déclenche quand TU commites une base NGAP validée. C'est ta validation qui est
+# le déclencheur — donc ici, tout automatiser est sûr : plus aucune corvée manuelle
+# entre « la base est juste » et « le kiné a la bonne version ».
+#
+# Le partage (voir 08_VEILLE_NGAP.md) :
+#   détection = auto (ngap-watch.yml) · mise à jour de la base = humaine · release = auto
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "kine-cotation/knowledge_base/ngap_kine.json"
+      - "kine-cotation/webapp/build_webapp.py"
+      - "kine-cotation/webapp/assets/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Lire la version de la base
+        id: kb
+        run: |
+          V=$(python -c "import json;print(json.load(open('kine-cotation/knowledge_base/ngap_kine.json'))['_meta']['version'])")
+          S=$(python -c "import json;print(json.load(open('kine-cotation/knowledge_base/ngap_kine.json'))['_meta']['source'])")
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "source=$S" >> "$GITHUB_OUTPUT"
+
+      - name: Construire l'app
+        working-directory: kine-cotation/webapp
+        run: python build_webapp.py
+
+      - name: Garde-fou — l'app doit porter la version de la base
+        working-directory: kine-cotation/webapp
+        run: |
+          # Une app qui embarque un vieux barème alors que la base a bougé produirait
+          # une justification qui atteste le mauvais barème. On préfère casser le build.
+          grep -q '"version": "${{ steps.kb.outputs.version }}"' kinecotation.html \
+            || { echo "::error::kinecotation.html n'embarque pas la base v${{ steps.kb.outputs.version }}"; exit 1; }
+          test -s kinecotation.html
+
+      - name: Publier la release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="kine-v${{ steps.kb.outputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" kine-cotation/webapp/kinecotation.html --clobber
+          else
+            gh release create "$TAG" kine-cotation/webapp/kinecotation.html \
+              --title "KinéCotation — barème v${{ steps.kb.outputs.version }}" \
+              --notes "Base NGAP v${{ steps.kb.outputs.version }}.
+
+          Source : ${{ steps.kb.outputs.source }}
+
+          Fichier autonome (polices incluses, aucune requête réseau). L'app affiche le barème
+          appliqué dans son en-tête et l'épingle dans chaque justification — une preuve qui ne
+          dit pas sous quel barème elle a été produite ne vaut rien.
+
+          _Aide à la décision. Le praticien valide et reste responsable._"
+          fi

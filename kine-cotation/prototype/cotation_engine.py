@@ -19,7 +19,9 @@ Usage :
 """
 
 import json
+import re
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
 KB_PATH = Path(__file__).resolve().parent.parent / "knowledge_base" / "ngap_kine.json"
@@ -50,6 +52,77 @@ def charger_kb():
 def tarif(coefficient, kb, drom=False):
     valeur = kb["_meta"]["valeur_lettre_cle_eur"]["drom" if drom else "metropole"]
     return round(coefficient * valeur, 2)
+
+
+# --- Cotations datees ------------------------------------------------------
+# La NGAP bouge par PALIERS : 01/01/2026, 28/05/2026 (avenant 8), 01/09/2026
+# (+1 point sur 5 actes NMI neuro). Un acte peut donc porter "_paliers".
+#
+# La date qui fait foi est celle DE LA SEANCE, jamais "aujourd'hui" : une seance
+# du 31/08 facturee le 05/09 se cote au bareme du 31/08. Et la justification doit
+# attester le bareme en vigueur CE JOUR-LA.
+
+class HorsPerimetreTemporel(ValueError):
+    """Seance anterieure a l'historique de la base — on refuse plutot que de mentir."""
+
+
+def _iso(d) -> str:
+    """Normalise date | datetime | 'YYYY-MM-DD' -> 'YYYY-MM-DD' (comparable en str)."""
+    if d is None:
+        return date.today().isoformat()
+    if isinstance(d, datetime):
+        return d.date().isoformat()
+    if isinstance(d, date):
+        return d.isoformat()
+    d = str(d).strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
+        raise ValueError(f"Date attendue au format AAAA-MM-JJ, recu : {d!r}")
+    return d
+
+
+def verifier_date(kb, date_seance=None) -> str:
+    """Refuse une date que la base ne sait pas coter.
+
+    La base n'a PAS d'historique avant `applicable_depuis`. Coter une seance
+    anterieure produirait un tarif faux — et la justification l'attesterait, ce qui
+    est le pire echec possible pour un produit dont la promesse est la preuve.
+    Mieux vaut ne rien rendre que rendre une preuve fausse.
+    """
+    d = _iso(date_seance)
+    depuis = kb["_meta"].get("applicable_depuis")
+    if depuis and d < depuis:
+        raise HorsPerimetreTemporel(
+            f"Seance du {d} : la base ne couvre les tarifs qu'a partir du {depuis} "
+            f"({kb['_meta']['source']}). Coter cette seance donnerait un bareme faux. "
+            "Se referer au tableau SNMKR en vigueur a cette date."
+        )
+    return d
+
+
+def acte_a_la_date(acte, date_seance=None):
+    """Rend (coefficient, tarif_metropole, palier_applique) a la date de la seance.
+
+    Retient le DERNIER palier dont a_partir_du <= date. Sans palier applicable, les
+    valeurs de premier niveau (valables depuis _meta.applicable_depuis) s'appliquent.
+    """
+    d = _iso(date_seance)
+    coef, tar, palier = acte["coefficient"], acte["tarif_metropole"], None
+    for p in sorted(acte.get("_paliers", []), key=lambda p: p["a_partir_du"]):
+        if d >= p["a_partir_du"]:
+            coef, tar, palier = p["coefficient"], p["tarif_metropole"], p
+    return coef, tar, palier
+
+
+def paliers_a_venir(kb, date_seance=None):
+    """Paliers pas encore en vigueur — pour prevenir avant qu'ils tombent."""
+    d = _iso(date_seance)
+    out = []
+    for a in kb["actes"]:
+        for p in a.get("_paliers", []):
+            if p["a_partir_du"] > d:
+                out.append({"date": p["a_partir_du"], "code": a["code"], "libelle": a["libelle"],
+                            "de": a["coefficient"], "vers": p["coefficient"]})
+    return sorted(out, key=lambda x: (x["date"], x["code"]))
 
 
 # --- Selection d'actes -----------------------------------------------------
@@ -112,25 +185,35 @@ def ligne_deplacement(kb, acte_article, drom=False, ik_km=0, terrain="plaine"):
 
 
 # --- Facturation -----------------------------------------------------------
-def ligne(acte, kb, drom=False):
+def ligne(acte, kb, drom=False, date_seance=None):
+    """Ligne de facture cotee au bareme en vigueur A LA DATE DE LA SEANCE."""
+    coef, _tarif_ref, palier = acte_a_la_date(acte, date_seance)
     return {
         "code": acte["code"],
-        "coefficient": acte["coefficient"],
-        "tarif": tarif(acte["coefficient"], kb, drom),
+        "coefficient": coef,
+        "tarif": tarif(coef, kb, drom),
         "libelle": acte["libelle"],
         "article": acte.get("article", "-"),
         "referentiel": acte.get("referentiel", False),
         "chirurgie": acte.get("chirurgie", False),
+        "palier": palier["a_partir_du"] if palier else None,
+        # Un palier CONDITIONNEL ne doit jamais changer un tarif en silence : le
+        # risque est asymetrique. S'il n'entre pas en vigueur et qu'on l'a applique,
+        # le kine SURCOTE -> indu. S'il entre en vigueur et qu'on l'ignore, il
+        # sous-cote -> il perd de l'argent, sans risque legal. Dans un produit dont
+        # la promesse est la defendabilite, c'est la surcotation qu'on ne doit pas causer.
+        "conditionnel": bool(palier and palier.get("conditionnel")),
+        "condition": palier.get("condition") if palier else None,
     }
 
 
-def generer_facture(lignes, kb, patient="—", date="—", drom=False, justif=True, alertes=None):
+def generer_facture(lignes, kb, patient="—", date_seance="—", drom=False, justif=True, alertes=None):
     total = round(sum(l["tarif"] for l in lignes), 2)
     out = []
     out.append("=" * 64)
     out.append("  FEUILLE DE SOINS — proposition de cotation (aide a la decision)")
     out.append("=" * 64)
-    out.append(f"  Patient : {patient}      Date : {date}"
+    out.append(f"  Patient : {patient}      Date de seance : {date_seance}"
                + ("      [DROM-COM]" if drom else ""))
     out.append("-" * 64)
     out.append(f"  {'Code':<6}{'Coef':>6}{'Tarif':>9}   Acte")
@@ -142,6 +225,15 @@ def generer_facture(lignes, kb, patient="—", date="—", drom=False, justif=Tr
     out.append("-" * 64)
     out.append(f"  {'TOTAL':<6}{'':>6}{total:>8.2f}€")
     out.append("=" * 64)
+    cond = [l for l in lignes if l.get("conditionnel")]
+    if cond:
+        out.append("  /!\\ COTATION SOUS RESERVE :")
+        for l in cond:
+            out.append(f"   {l['code']} {l['coefficient']} applique le palier du {l['palier']}, "
+                       "dont l'entree en vigueur est CONDITIONNELLE.")
+        out.append("   " + (cond[0]["condition"] or "")[:300])
+        out.append("   -> Verifier le tableau SNMKR en vigueur AVANT de facturer.")
+        out.append("-" * 64)
     if alertes:
         out.append("  ALERTES SEANCES / ACCORD PREALABLE :")
         for a in alertes:
@@ -150,9 +242,15 @@ def generer_facture(lignes, kb, patient="—", date="—", drom=False, justif=Tr
     if justif:
         out.append("  JUSTIFICATION (a conserver - anti-indu) :")
         for l in lignes:
-            out.append(f"   - {l['code']} {l['coefficient']} (art. {l['article']}) : "
+            palier = f" [palier du {l['palier']}]" if l.get("palier") else ""
+            out.append(f"   - {l['code']} {l['coefficient']} (art. {l['article']}){palier} : "
                        f"{l['libelle']}.")
         out.append("   Pieces : ordonnance + BDK. Verifier coherence soins<->prescription.")
+        # Une preuve qui ne dit pas SOUS QUEL BAREME elle a ete produite ne vaut rien :
+        # le bareme a bouge 3 fois en 8 mois. Cf. 05_REPOSITIONNEMENT_PREUVE.md.
+        m = kb["_meta"]
+        out.append(f"   Bareme applique : {m['source']} | base v{m['version']} | "
+                   f"lettre-cle {tarif(1, kb, drom):.2f}EUR | seance du {date_seance}")
     out.append("  /!\\ Aide a la decision — le kine valide et reste responsable.")
     out.append("=" * 64)
     return "\n".join(out), total
@@ -174,11 +272,24 @@ def oui(prompt):
     return input(f"\n{prompt} [o/n] > ").strip().lower().startswith("o")
 
 
+def demander_date_seance(kb):
+    """La date de la seance pilote le bareme -> elle n'est plus optionnelle."""
+    defaut = date.today().isoformat()
+    while True:
+        saisie = input(f"\nDate de la seance [AAAA-MM-JJ, entree = {defaut}] > ").strip() or defaut
+        try:
+            return verifier_date(kb, saisie)
+        except (HorsPerimetreTemporel, ValueError) as e:
+            print(f"  {e}")
+
+
 def interactif(kb):
     print("\n### KinéCotation — guide de cotation -> facture (proto v1) ###")
     drom = oui("Exercice en DROM-COM ?")
     patient = input("\nNom patient (option) > ").strip() or "—"
-    date = input("Date de seance (option) > ").strip() or "—"
+    date_seance = demander_date_seance(kb)
+    for p in paliers_a_venir(kb, date_seance):
+        print(f"  [i] {p['date']} : {p['code']} {p['de']} -> {p['vers']}  ({p['libelle'][:42]})")
     lignes = []
     alertes = []
 
@@ -203,7 +314,7 @@ def interactif(kb):
         acte = choisir("Acte precis realise ?", actes,
                        lambda a: f"{a['code']} {a['coefficient']} ({a['tarif_metropole']}€) "
                                  f"- {a['libelle']}")
-        lignes.append(ligne(acte, kb, drom))
+        lignes.append(ligne(acte, kb, drom, date_seance))
         print(f"  + Ajoute : {acte['code']} {acte['coefficient']}")
 
         # Referentiel / DAP
@@ -241,7 +352,7 @@ def interactif(kb):
             terrain = {"2": "montagne", "3": "pied_ski"}.get(t, "plaine")
         lignes.append(ligne_deplacement(kb, art, drom, km, terrain))
 
-    texte, _ = generer_facture(lignes, kb, patient, date, drom, alertes=alertes)
+    texte, _ = generer_facture(lignes, kb, patient, date_seance, drom, alertes=alertes)
     print("\n" + texte)
 
 

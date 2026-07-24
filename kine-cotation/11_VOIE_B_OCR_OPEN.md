@@ -1,0 +1,256 @@
+# KinéCotation — Voie B : OCR open auto-hébergé sur GPU HDS
+
+> 2026-07-18. Préparer la voie souveraine : un modèle OCR **open** tournant sur une **GPU dans le
+> périmètre HDS** (Scaleway/Outscale). La donnée d'ordonnance **ne quitte jamais notre infra** →
+> pas de sous-traitant tiers, rétention qu'on contrôle → **flux nominatif possible**. Voir `10_OCR_FOURNISSEURS.md`.
+> Le seul inconnu : un modèle open lit-il le **manuscrit médical FR** aussi bien que Mistral OCR 4 ? → à benchmarker.
+
+---
+
+## 1. Candidats (licence = le point à ne pas rater)
+
+Fait clé sourcé : sur du **manuscrit**, les OCR « traditionnels » (Tesseract, docTR, PaddleOCR, Surya)
+**échouent** ; ce sont les **VLM** (modèles vision-langage) qui lisent l'écriture. On vise donc des VLM
+servables via une API OpenAI-compatible (vLLM), sous licence **commerciale-compatible**.
+
+| Modèle | Licence | Manuscrit FR | Servi vLLM | Verdict |
+|---|---|---|---|---|
+| **Qwen2.5-VL-7B / 32B** | **Apache 2.0** (7B & 32B) | Oui (VLM, extraction) | Oui (vllm>0.7.2) | **LEAD** — libre commercial, taille raisonnable |
+| **Pixtral-12B** | **Apache 2.0** | Oui (VLM généraliste) | Oui | Bon — cohérence « famille Mistral » |
+| **olmOCR / RolmOCR** (AllenAI) | Apache 2.0 (sur Qwen2-VL) | Oui — **spécialisé doc/manuscrit** | Oui | Fort candidat spécialisé OCR |
+| GOT-OCR 2.0 | Apache 2.0 | Oui (manuscrit, tables, formules) | via serveur | À tester |
+| Chandra 2 (Datalab) | code Apache 2.0 / poids **OpenRAIL-M** | Oui (90+ langues) | — | ⚠️ **gratuit < 2 M$ CA**, licence au-delà |
+| Surya (Datalab) | GPL-3.0 + **RAIL-M** | Faible (OCR classique) | — | ⚠️ revenue-gated + faible manuscrit |
+| docTR / PaddleOCR / Tesseract | Apache 2.0 / libre | **Faible (imprimé)** | — | Fallback **tapé** seulement |
+
+- ⚠️ **Qwen2.5-VL-3B = recherche seulement** ; **72B** = licence commerciale au-delà de 100 M MAU. → rester **7B/32B**.
+- ⚠️ **Surya / Chandra** sont *revenue-gated* (libres sous 2 M$ CA) : OK au départ, à re-checker à l'échelle.
+
+**Shortlist à benchmarker** : Qwen2.5-VL-7B (lead), olmOCR (spécialisé), Pixtral-12B (famille Mistral).
+Fallback imprimé si besoin : docTR/PaddleOCR. Baseline de référence : **Mistral OCR** (voie A).
+
+Sources : [Qwen2.5-VL licences par taille](https://qwen.ai/blog?id=qwen2.5-vl) ·
+[olmOCR AllenAI](https://olmocr.allenai.org/) ·
+[comparatif OCR open 2026](https://modal.com/blog/8-top-open-source-ocr-models-compared)
+
+---
+
+## 2. Câblage technique — DÉJÀ FAIT
+
+`prototype/llm.py` a un 3ᵉ provider **`selfhosted`** : appelle un endpoint **OpenAI-compatible**
+(vLLM) via `KINE_LLM_BASE_URL`, sans dépendance ajoutée (urllib), format image objet OpenAI,
+température 0, clé optionnelle (`KINE_LLM_API_KEY`), modèle surchargeable (`KINE_LLM_MODELE`).
+Vérifié : requête bien formée en dry-run. **Basculer sur la voie B = variables d'env, pas de code.**
+
+```
+export KINE_LLM_PROVIDER=selfhosted
+export KINE_LLM_BASE_URL=http://<gpu-hds>:8000/v1
+export KINE_LLM_MODELE=Qwen/Qwen2.5-VL-7B-Instruct
+```
+
+---
+
+## 3. Servir le modèle sur GPU HDS (esquisse)
+
+1. **GPU Instance dans le périmètre HDS** (Scaleway : contrat HDS + support Business, périmètre
+   confirmé = CPU/GPU Instances, Object/Block Storage, Bare Metal, VPC ; ou Outscale). Une L4/L40S
+   suffit pour un 7B ; A100 pour 32B.
+2. **vLLM** en serveur OpenAI-compatible :
+   `python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen2.5-VL-7B-Instruct --port 8000`
+3. Réseau **privé (VPC)** : l'endpoint n'est joignable que par notre backend, pas exposé au public.
+4. `server.py` (OCR) → `llm._call_llm` → `selfhosted` → l'ordonnance va **de notre backend à notre
+   GPU HDS**, et nulle part ailleurs. Rétention = ce qu'on décide (rien).
+
+> On n'a **pas** à être soi-même certifié HDS : héberger sur une infra certifiée sous contrat HDS suffit.
+> Reste à faire valider le montage par un juriste (posture projet : « diagnostic informatif »).
+
+---
+
+## 4. Benchmark — le harnais existe déjà
+
+`benchmark/run_batch.py` passe par `ordonnance_ocr` → `llm._call_llm` : il benchmarke **n'importe quel
+provider à iso-pipeline**. Donc comparer les candidats open à Mistral = changer une variable d'env,
+sur les **mêmes ordonnances anonymisées** et les **mêmes métriques** (`benchmark/00_PROTOCOLE_BENCHMARK_OCR.md` :
+champs critiques, bon acte top-1/3/5, alerte DAP, calibration confiance, **manuscrit vs tapé**).
+
+```
+KINE_LLM_PROVIDER=mistral    python benchmark/run_batch.py benchmark/ordonnances   # baseline (voie A)
+KINE_LLM_PROVIDER=selfhosted KINE_LLM_BASE_URL=... KINE_LLM_MODELE=Qwen/Qwen2.5-VL-7B-Instruct \
+                             python benchmark/run_batch.py benchmark/ordonnances   # candidat voie B
+python benchmark/score.py benchmark/ordonnances
+```
+
+**Ce que le benchmark décide** : si un modèle open atteint le seuil du protocole (§4) sur le
+**manuscrit** (le cas dur), la voie B est viable → souveraineté sans dépendre d'un tiers. Sinon : voie A
+(Mistral souverain via Outscale + ZDR), ou OCR open réservé au **tapé** + saisie clic pour le manuscrit
+(le produit tient quand même — l'OCR est un accélérateur, pas le moteur de valeur).
+
+**Bloquant unique, comme toujours** : il faut les **vraies ordonnances anonymisées de Malcom**. Le
+benchmark contient aujourd'hui 1 image synthétique. Sans échantillon réel, le choix voie A / voie B /
+modèle se fait à l'aveugle.
+
+---
+
+## 4 bis. Premier benchmark — 2026-07-18 (PRÉLIMINAIRE)
+
+Qwen2.5-VL-7B tourne **en local sur la RTX 4070** (12 Go) via Ollama (`qwen2.5vl:7b`,
+endpoint OpenAI-compatible → provider `selfhosted`). Comparé à Claude Sonnet (voie A, cloud) sur
+les **10 ordonnances synthétiques TAPÉES** (`benchmark/synthetiques/`) :
+
+Comparaison **à trois** (10 synthétiques tapées, après ajustement prompt+coercion) :
+
+| Champ | Mistral medium (A, cloud) | Claude Sonnet (A, cloud) | Qwen2.5-VL-7B (B, local) |
+|---|---|---|---|
+| nb_seances | 100 % | 100 % | 100 % |
+| chirurgie | 100 % | **100 %** (était 70 %) | **90 %** (était 70 %) |
+| domicile | 100 % | 100 % | 100 % |
+| bilan | 100 % | 100 % | 100 % (était 20 %) |
+| acte top-1 | 80 % | 80 % | 60 % |
+| acte top-3 / top-5 | 90 % | 90 % | 90 % |
+| alerte DAP | 89 % | 89 % | 89 % |
+| perf / coût | API FR/UE | API cloud | **~10 s/img, local, gratuit** |
+
+Après correctifs (prompt + coercions), **les trois sont solides sur l'extraction du tapé** : Mistral et
+Claude à 100 % partout sauf top-1 80 %, Qwen juste derrière (chirurgie 90 %, top-1 60 %). Pour un
+modèle **gratuit sur la RTX 4070**, excellent signal pour la voie B souveraine.
+
+Le `chirurgie` 70 %→100/90 % : le champ n'était pas contraint → les modèles rendaient du texte libre
+(« operee ») ou se réfugiaient dans « inconnu ». Corrigé au prompt (oui/non/inconnu exigés, liste des
+gestes chirurgicaux) + normalisation `_to_chirurgie` (mot chirurgical → oui, négation → non).
+
+**Lecture** : la voie B est à **quasi-parité** sur le tapé — un modèle open, gratuit, sur la machine
+d'Enzo, égale Claude Sonnet sur **tous les champs d'extraction** (séances, domicile, bilan) sauf
+top-1 (60 % vs 80 %, qui dépend aussi du matcheur d'actes rudimentaire). Le `chirurgie` à 70 % est
+**partagé** avec Claude → faiblesse de tâche/prompt, pas de modèle.
+
+**Le bilan 20 %→100 % expliqué** : Qwen mettait le *texte* du bilan (« - Bilan diagnostic… ») dans
+`mention_bilan` au lieu de `true`. Corrigé sur 2 fronts (2026-07-18) : prompt (types stricts explicites)
++ coercion « présence » (`_to_bool` : toute chaîne non-vide non-négation = True). Claude non affecté
+(vérifié, aucune régression). Reste vrai : **tapé uniquement, 10 échantillons** — le manuscrit décide.
+
+⚠️ **Caveats** : (1) **TAPÉ uniquement** — le manuscrit, le vrai juge, n'est pas testé (→ RIMES +
+Malcom) ; (2) **10 échantillons** = bruité, surtout la calibration de confiance (peu fiable pour les
+deux modèles) ; (3) chirurgie 70 % est partagé → à améliorer au prompt.
+
+**Correctif rendu nécessaire ici** : les modèles open rendent un JSON plus lâche (booléens en
+`"oui"/"non"`, entiers en `"50 séances"`, `alertes: ""` au lieu de `[]`) → le schéma Pydantic strict
+rejetait 10/10. `ordonnance_ocr.py` coerce désormais bool/int/list → on benchmarke l'**OCR** à armes
+égales, pas le formatage JSON. (Claude/Mistral, déjà stricts, ne sont pas affectés.)
+
+## 4 ter. Filtre MANUSCRIT FR (RIMES) — 2026-07-18
+
+L'axe que le synthétique (tapé) ne peut pas tester : **lire l'écriture cursive française**.
+`benchmark/rimes_handwriting.py` fait transcrire N lignes manuscrites réelles de **RIMES**
+(Teklia/RIMES-2011-line, MIT — lettres à des assureurs) et mesure le **CER** (taux d'erreur
+caractère). C'est le 1er filtre des candidats voie B **avant** GPU/ordonnances réelles.
+
+### GRAND ÉCHANTILLON (2026-07-20) — corrige le petit
+
+Le 1er test (12 lignes) était trop optimiste. Repris sur **100–200 lignes** (RIMES test = 704
+utilisables). `benchmark/rimes_aggregate.py` fait le face-à-face sur les lignes communes (ordre
+déterministe → `idx` aligné entre providers).
+
+| Modèle | n | CER moyen | médiane | p90 | max | <5 % | <10 % |
+|---|---|---|---|---|---|---|---|
+| Claude Sonnet (chat/VLM) | 100 | **0,94 %** | 0 % | 2,6 % | 18 % | 95 % | 96 % |
+| **Mistral OCR 4** (`mistral-ocr-latest`, OCR dédié) | 100 | **1,29 %** | 0 % | 5,0 % | 10 % | 90 % | 98 % |
+| **Qwen2.5-VL-7B LOCAL** (RTX 4070, gratuit) | 200 | **4,48 %** | 1,3 % | 11,4 % | 60 % | 73 % | 88 % |
+| Mistral medium (`mistral-medium-latest`, chat) | 12 | 19,6 % | 18 % | — | — | 0 % | 0 % |
+
+*(Face-à-face sur les 100 lignes communes : Qwen 3,9 %, Claude 0,94 %, Mistral OCR 1,29 % — même hiérarchie.)*
+
+**Ce que le grand échantillon révèle (et que 12 lignes cachaient) :**
+
+1. **Qwen local n'est PAS à parité** — 4,5 % de CER contre ~1 % pour le cloud, soit **~4× plus
+   d'erreurs**, avec une **traîne** (p90 11 %, max 60 % : quelques lignes complètement ratées). Le
+   « 2,4 % » initial était un artefact de petit échantillon. **Médiane 1,3 %** quand même → la moitié
+   des lignes quasi parfaites, mais le tiers restant tire la moyenne.
+2. Le cloud OCR reste **excellent et régulier** : Claude 0,94 %, Mistral OCR 4 1,29 %.
+3. ⚠️ **NE PAS confondre chat et OCR dédié** : `mistral-medium` (meilleur en *extraction* du tapé) est
+   **mauvais en manuscrit** (19,6 %). L'OCR Mistral = `mistral-ocr-4`, **endpoint séparé** (`/v1/ocr`)
+   rendant du texte, pas du JSON → voie A Mistral = **pipeline 2 temps** (OCR transcrit → modèle extrait).
+
+**Verdict honnête sur voie A vs B** : le choix n'est plus « à parité » mais un **arbitrage** :
+- **Voie A (cloud)** : ~1 % CER, régulier — mais la donnée sort (contrat ZDR/HDS requis, cf. `10_`).
+- **Voie B (Qwen local)** : ~4,5 % CER + traîne de ratés — mais souverain, gratuit, un seul appel VLM
+  (lit ET extrait). L'avantage souveraineté/coût se paie d'un **coût réel de précision** sur le manuscrit.
+
+⚠️ **Et ça reste RIMES = lettres *propres*.** Sur du gribouillis de médecin, tous ces scores chutent, et
+l'écart Qwen↔cloud risque de **se creuser** (les petits modèles décrochent plus vite sur le bruit).
+Le go/no-go final = les **vraies ordonnances de Malcom**. Piste voie B si l'écart est rédhibitoire :
+fine-tuner un modèle open sur des ordonnances, ou réserver Qwen au **tapé** + cloud/saisie pour le manuscrit.
+
+## 4 quater. Gribouillis médical RÉEL (mots manuscrits de médecin) — 2026-07-20
+
+RIMES teste l'écriture cursive FR sur des **lettres propres**. L'autre extrême — le
+« gribouillis de médecin » — se teste sur un jeu **licite** trouvé sur Hugging Face :
+**`MMMuzammil/Medical_Prescription_Handwritten_Words`** (licence **MIT**, **46 images**
+de **mots manuscrits** ; le nom du fichier = la vérité terrain). Contenu : **36 mots**
+(noms de médicaments : Amoxicillin, Paracetamol, Losartan, Metformin, Ibuprofen… + termes
+cliniques/posologie : Fever, Dosage, Twice, Before…) et **10 chiffres isolés** (0–9).
+Harnais : `benchmark/doctor_handwriting.py` (réutilise `cer`/`_norm`/OCR Mistral de
+`rimes_handwriting.py`) ; agrégation `benchmark/doctor_aggregate.py`.
+
+**Métrique adaptée** (ce ne sont pas des lignes mais des MOTS isolés) : le KPI est
+l'**exactitude MOT** — un nom de médicament est *bon ou faux*, un seul caractère erroné =
+mauvais médicament. Le CER **moyen brut est inexploitable ici** : sur un glyphe court, une
+sortie verbeuse fait exploser le ratio (>100 %). On rapporte donc l'exactitude mot + CER
+**médian** + CER moyen **plafonné à 100 %/image**.
+
+| Modèle | Voie | **MOTS** (36) | Chiffres isolés (10) | Global (46) | CER méd. | CER moy. plaf. |
+|---|---|---|---|---|---|---|
+| **Claude Sonnet** (chat/VLM) | A cloud | **94,4 %** (34/36) | 70 % (7/10) | 89,1 % | 0 % | 7,7 % |
+| **Qwen2.5-VL-7B LOCAL** (RTX 4070, gratuit) | **B** | **91,7 %** (33/36) | 30 % (3/10) | 78,3 % | 0 % | 17,7 % |
+| **Mistral OCR 4** (`mistral-ocr-latest`, OCR dédié) | A cloud | 83,3 % (30/36) | 20 % (2/10) | 69,6 % | 0 % | 31,3 % |
+
+**Ce que ça révèle — et qui NUANCE la prédiction de RIMES :**
+
+1. **Sur les MOTS médicaux, Qwen local est à quasi-parité avec Claude** (91,7 % vs 94,4 % —
+   1 mot d'écart) et **bat nettement Mistral OCR** (83,3 %). La hiérarchie RIMES (cloud >> Qwen)
+   **ne tient pas** sur le vocabulaire médical isolé : la lecture d'un mot s'appuie fortement sur
+   le **prior de langue** du VLM (Qwen « devine » un mot plausible), là où RIMES mesurait la
+   transcription caractère-à-caractère de phrases entières. En §4 ter on redoutait que l'écart
+   Qwen↔cloud **se creuse** sur le gribouillis : sur ces **mots**, il **ne se creuse pas**.
+2. **L'OCR dédié n'est PAS automatiquement meilleur.** `mistral-ocr-4`, excellent sur RIMES
+   (1,29 %), finit **dernier** ici : il abîme des noms (`Losartan`→`Lasartan`, `Vitamin`→`Vitamis`)
+   et surtout **hallucine du LaTeX/markdown** sur les glyphes ambigus (un « 7 » manuscrit → un tableau
+   de 1 à 99). Un endpoint OCR optimisé « document/ligne » se comporte mal sur des **imagettes
+   d'un seul mot**.
+3. **Point dur commun = les CHIFFRES isolés** (dose, nombre de séances). Tous chutent (Sonnet
+   70 %, Qwen 30 %, Mistral 20 %) : un chiffre manuscrit **sans contexte** est intrinsèquement
+   ambigu, et le prior de langue qui aide sur les mots **égare** sur un chiffre seul (Qwen lit
+   « Oxycodone » pour un « 0 »). ⚠️ **Signal produit** : la **posologie chiffrée** (nombre de
+   séances, doses) est le maillon faible de l'OCR manuscrit — à faire valider (cloud ou clic).
+
+**Limites à assumer (ce test NE dit PAS que le manuscrit FR est réglé) :**
+- **Langue = anglais/latin** (noms de médicaments), **pas le français**. Ça teste la lecture de
+  vocabulaire médical manuscrit, **pas** l'écriture cursive FR → **RIMES reste la référence FR**.
+- **Mots ISOLÉS**, pas des lignes ni des ordonnances entières : ni contexte, ni mise en page, ni
+  posologie complète (« 30 séances, 3×/semaine »). Une vraie ordonnance est plus dure.
+- Ces mots sont **relativement lisibles** (un scripteur, main soignée) — **pas** le gribouillis
+  multi-mots illisible du cliché. C'est un **plancher** (« sait-il lire du vocabulaire médical
+  net ? »), pas le cas le plus dur.
+- **n = 46 (36 mots)** : petit échantillon → **indicatif**, pas de p90 fiable.
+
+**Ce que ça change pour voie A / B / hybride :**
+- Renforce la **viabilité de la voie B** sur le sous-tâche « lire un mot médical » : Qwen local,
+  gratuit, ≈ Claude sur les noms de médicaments, et **au-dessus de l'OCR Mistral**. Un modèle open
+  souverain n'est pas disqualifié sur le lexique médical.
+- Mais la **faiblesse sur les chiffres** (30 % Qwen vs 70 % Sonnet) plaide pour un **hybride
+  ciblé** : OCR open pour le texte/lexique, **validation cloud ou humaine sur les nombres**
+  (posologie, séances) — cohérent avec le rôle « accélérateur, pas moteur » de l'OCR (§4).
+- **Ne déplace pas le go/no-go** : il faut toujours les **vraies ordonnances FR de Malcom**
+  (contexte + mise en page + français + posologie réelle). Ce test est un **2ᵉ filtre licite** qui
+  dit : « sur du vocabulaire médical manuscrit, Qwen tient tête à Claude, et l'OCR dédié n'est pas
+  un gage supérieur ».
+
+*(Rejouable : `KINE_LLM_PROVIDER=selfhosted KINE_LLM_BASE_URL=http://localhost:11434/v1
+KINE_LLM_MODELE=qwen2.5vl:7b python benchmark/doctor_handwriting.py` ; idem `anthropic`/`claude-sonnet-5`
+et `mistral-ocr`/`mistral-ocr-latest` ; puis `python benchmark/doctor_aggregate.py`.)*
+
+## 5. Reste à faire
+- Obtenir l'échantillon (15-20 ordonnances réelles anonymisées, manuscrites ET tapées).
+- Monter une GPU HDS de test + vLLM (quelques heures ; coût GPU à l'heure, pas de contrat annuel pour tester).
+- Benchmarker les 3 candidats vs Mistral ; trancher sur les chiffres.
+- Prompt : les VLM open peuvent avoir besoin d'un prompt d'extraction plus explicite que Claude/Mistral
+  (schéma JSON répété) — à ajuster dans `ordonnance_ocr.SYSTEME` si le taux de JSON valide est bas.

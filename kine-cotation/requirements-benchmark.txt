@@ -1,0 +1,7 @@
+# KinéCotation — dépendances BENCHMARK uniquement (pas l'app, pas l'hébergement)
+# Install : python -m pip install -r requirements.txt -r requirements-benchmark.txt
+#
+# Sorti de requirements.txt pour que l'image d'hébergement (Render/Docker) reste
+# légère : datasets tire pyarrow (~150 Mo) et n'est utile qu'aux scripts benchmark/.
+
+datasets==5.0.0       # télécharge RIMES (filtre manuscrit FR) — benchmark/rimes_handwriting.py

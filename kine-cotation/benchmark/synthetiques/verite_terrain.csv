@@ -1,0 +1,11 @@
+﻿id;type(manuscrit/tape);chirurgie(oui/non);nb_seances;bilan(oui/non);domicile(oui/non);acte_id_correct;dap_attendue(oui/non);commentaire
+syn_01_ptg_genou;tape;oui;30;oui;oui;31;oui;synthetique — arthroplastie du genou
+syn_02_lombalgie;tape;non;10;oui;non;0;non;synthetique — Lombalgie commune
+syn_03_lca_genou;tape;oui;40;oui;non;32;non;synthetique — ligament croise anterieur
+syn_04_coiffe_epaule;tape;oui;50;oui;non;21;non;synthetique — coiffe des rotateurs
+syn_05_entorse_cheville;tape;non;10;non;non;28;non;synthetique — entorse externe recente de cheville
+syn_06_cervicalgie;tape;non;15;oui;non;5;non;synthetique — cervicalgie
+syn_07_hemiplegie;tape;non;50;oui;oui;56;non;synthetique — hemiplegie
+syn_08_fracture_poignet;tape;non;25;oui;non;15;non;synthetique — extremite distale des deux os de l'avant-bras
+syn_09_incomplete;tape;non;;non;non;0;;synthetique — Lombalgie commune
+syn_10_respiratoire;tape;non;15;oui;oui;63;non;synthetique — respiratoire

@@ -13,3 +13,31 @@ node_modules/
 # Junk
 nouveau*.txt
 yes
+
+# registre de comptes KineCotation (hash — jamais publie)
+kine-cotation/webapp/accounts.json
+accounts.json
+
+# fiche d'acces pilote (mot de passe en clair — jamais publie, a supprimer apres transmission)
+kine-cotation/webapp/PILOTE_ACCES_MALCOM.txt
+
+# logs runtime du pilote (serveur + tunnel cloudflared)
+*.log
+*.log.err
+
+# sorties generees du benchmark (regenerables par run_batch/score)
+kine-cotation/benchmark/**/predictions.csv
+kine-cotation/benchmark/**/verite_terrain_modele.csv
+kine-cotation/benchmark/**/catalogue_actes.csv
+kine-cotation/benchmark/**/rapport_benchmark.csv
+
+# resultats RIMES par ligne (regenerables)
+kine-cotation/benchmark/rimes/*.csv
+
+# resultats gribouillis medical par image (regenerables)
+kine-cotation/benchmark/doctor/*.csv
+
+# vraies ordonnances (donnees de sante, meme caviardees) — JAMAIS commitees
+kine-cotation/benchmark/reel/
+kine-cotation/livraison-malcom/
+kine-cotation/webapp/render-env.txt
