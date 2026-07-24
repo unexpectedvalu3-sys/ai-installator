@@ -1,0 +1,35 @@
+# Render Blueprint — KinéCotation (pilote Malcom)
+# Déploiement quasi un-clic : dashboard.render.com → New + → Blueprint → ce dépôt.
+# Render lit ce fichier, crée le service, et te DEMANDE les 3 secrets (sync:false)
+# dans son interface — ils ne vivent JAMAIS dans le dépôt.
+#
+# Serveur sans état (pas de base) : sessions dans un cookie signé, profil + dossier
+# de preuve dans le navigateur du kiné. Seul flux de santé = l'OCR (proxy transitoire).
+services:
+  - type: web
+    name: kinecotation
+    runtime: docker
+    repo: https://github.com/unexpectedvalu3-sys/ai-installator
+    branch: kine-cotation/socle-v1.2
+    region: frankfurt            # UE — l'OCR transite en Europe (cf. 09_HEBERGEMENT.md)
+    plan: free                   # suffit pour le pilote
+    dockerfilePath: kine-cotation/Dockerfile
+    dockerContext: kine-cotation
+    healthCheckPath: /healthz
+    autoDeploy: true             # push sur la branche → redéploie tout seul
+    envVars:
+      # --- non secrets : déjà bons, Render les applique tels quels ---
+      - key: HOST
+        value: 0.0.0.0
+      - key: KINE_LLM_PROVIDER
+        value: anthropic
+      - key: KINE_LLM_MODELE
+        value: claude-sonnet-5
+      # NE PAS définir PORT (Render l'injecte) ni COOKIE_INSECURE (HTTPS → cookie Secure auto).
+      # --- secrets : Render te les demande à la création (jamais dans le dépôt) ---
+      - key: KINE_ACCOUNTS         # sortie de make_account.py — voir webapp/render-env.txt
+        sync: false
+      - key: SECRET_KEY            # sortie de make_account.py — stable sinon les sessions sautent
+        sync: false
+      - key: ANTHROPIC_API_KEY     # clé Anthropic existante (webapp/.env) — NE PAS en créer une
+        sync: false

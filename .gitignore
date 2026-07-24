@@ -39,3 +39,5 @@ kine-cotation/benchmark/doctor/*.csv
 
 # vraies ordonnances (donnees de sante, meme caviardees) — JAMAIS commitees
 kine-cotation/benchmark/reel/
+kine-cotation/livraison-malcom/
+kine-cotation/webapp/render-env.txt
