@@ -1,0 +1,39 @@
+name: KinéCotation — keep-alive pilote
+
+# Empêche l'instance Render FREE de se mettre en veille PENDANT LES HEURES DE TRAVAIL.
+# Ping /healthz (endpoint public, aucun secret) toutes les ~10 min, lun-sam, ~7h-21h CET.
+# On ne pinge pas la nuit ni le dimanche → l'instance dort alors, ce qui ÉCONOMISE le
+# quota d'heures gratuites Render (750 h/mois, partagé avec tes autres services free).
+#
+# Best-effort : le planificateur cron de GitHub peut être retardé sous charge — l'app
+# peut donc encore dormir par moments (1er accès ~50 s). Pour du 100 % fiable → plan Starter.
+# Repo public → minutes GitHub Actions gratuites.
+
+on:
+  schedule:
+    - cron: "*/10 6-19 * * 1-6"   # UTC (~07:00–20:59 CET), lundi→samedi
+  workflow_dispatch:               # bouton « Run workflow » pour tester à la main
+
+# Un seul ping à la fois ; on annule un run encore en cours si un nouveau démarre.
+concurrency:
+  group: kine-keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Réveiller / garder éveillée l'instance Render
+        run: |
+          URL="https://kinecotation.onrender.com/healthz"
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 "$URL" || echo 000)
+            echo "essai $i : HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "instance éveillée ✓"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::warning::instance non réveillée après 3 essais (best-effort, plan gratuit)"
+          exit 0   # best-effort : on ne fait pas échouer le workflow (pas d'e-mail d'alerte inutile)
